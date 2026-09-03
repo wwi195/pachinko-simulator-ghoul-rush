@@ -44,3 +44,36 @@ test('simulateInvestment: CHARGE外れ→miss→図柄揃いでLTチャレンジ
   const result = withMockRandom(sequence, () => simulateInvestment(16, 40));
   assert.deepEqual(result, { spins: 3, toushi: 1000, path: 'zugar' });
 });
+
+const { HOLD_COLORS, HOLD_COLOR_WEIGHTS, rollHoldColor } = require('../rush-view-engine.js');
+
+test('HOLD_COLORS は白/点滅/青/緑/赤/虹の6段階', () => {
+  assert.deepEqual(HOLD_COLORS, ['none', 'flash', 'blue', 'green', 'red', 'rainbow']);
+});
+
+test('HOLD_COLOR_WEIGHTS の各outcomeの重みは合計100', () => {
+  for (const outcome of Object.keys(HOLD_COLOR_WEIGHTS)) {
+    const total = HOLD_COLORS.reduce((sum, c) => sum + HOLD_COLOR_WEIGHTS[outcome][c], 0);
+    assert.equal(total, 100, `outcome=${outcome}`);
+  }
+});
+
+test('rollHoldColor: missでrng=0はnone(白)', () => {
+  assert.equal(rollHoldColor('miss', () => 0), 'none');
+});
+
+test('rollHoldColor: missでrng=0.999はred(missの中で最高ランク)', () => {
+  assert.equal(rollHoldColor('miss', () => 0.999), 'red');
+});
+
+test('rollHoldColor: st_endはmissと同じ重みなのでrng=0はnone', () => {
+  assert.equal(rollHoldColor('st_end', () => 0), 'none');
+});
+
+test('rollHoldColor: hit_bigはnone/flashの重みが0なのでrng=0でもblueになる', () => {
+  assert.equal(rollHoldColor('hit_big', () => 0), 'blue');
+});
+
+test('rollHoldColor: hit_smallでrng=0.999はrainbow', () => {
+  assert.equal(rollHoldColor('hit_small', () => 0.999), 'rainbow');
+});
