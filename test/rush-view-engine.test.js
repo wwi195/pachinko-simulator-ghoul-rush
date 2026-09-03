@@ -77,3 +77,25 @@ test('rollHoldColor: hit_bigはnone/flashの重みが0なのでrng=0でもblue�
 test('rollHoldColor: hit_smallでrng=0.999はrainbow', () => {
   assert.equal(rollHoldColor('hit_small', () => 0.999), 'rainbow');
 });
+
+const {
+  RUSH_MODE_OPTIONS,
+  DEFAULT_RUSH_MODE,
+  MAX_HOLDS,
+  HOLD_CONSUME_INTERVAL_MS,
+} = require('../rush-view-engine.js');
+
+test('RUSH_MODE_OPTIONS はデフォルト+実機準拠3種の計4種', () => {
+  assert.deepEqual(RUSH_MODE_OPTIONS, [
+    { id: 'default',   label: 'デフォルト' },
+    { id: 'tokigeki',  label: '突撃' },
+    { id: 'rize',      label: 'リゼ襲来' },
+    { id: 'tsukiyama', label: '月山絶叫' },
+  ]);
+  assert.equal(DEFAULT_RUSH_MODE, 'default');
+});
+
+test('MAX_HOLDS は4、HOLD_CONSUME_INTERVAL_MS は1400', () => {
+  assert.equal(MAX_HOLDS, 4);
+  assert.equal(HOLD_CONSUME_INTERVAL_MS, 1400);
+});

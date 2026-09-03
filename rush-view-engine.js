@@ -75,6 +75,17 @@ function rollHoldColor(outcome, rng = Math.random) {
   return HOLD_COLORS[HOLD_COLORS.length - 1];
 }
 
+const RUSH_MODE_OPTIONS = [
+  { id: 'default',   label: 'デフォルト' },
+  { id: 'tokigeki',  label: '突撃' },
+  { id: 'rize',      label: 'リゼ襲来' },
+  { id: 'tsukiyama', label: '月山絶叫' },
+];
+const DEFAULT_RUSH_MODE = 'default';
+
+const MAX_HOLDS = 4;
+const HOLD_CONSUME_INTERVAL_MS = 1400;
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     YEN_PER_BALL,
@@ -84,5 +95,9 @@ if (typeof module !== 'undefined' && module.exports) {
     HOLD_COLORS,
     HOLD_COLOR_WEIGHTS,
     rollHoldColor,
+    RUSH_MODE_OPTIONS,
+    DEFAULT_RUSH_MODE,
+    MAX_HOLDS,
+    HOLD_CONSUME_INTERVAL_MS,
   };
 }
