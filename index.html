@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>パチンコシミュレーター（RUSH演出ver）</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <div id="title-bar">パチンコ　e東京喰種 RUSH演出ver</div>
+
+    <div id="header">
+      <div class="hrow hrow1">
+        <div class="stat-block">
+          <span class="stat-label">プレイ回数</span>
+          <span class="stat-value" id="total-plays-value">0</span>
+        </div>
+        <div class="stat-block">
+          <span class="stat-label">累計収支</span>
+          <span class="stat-value gold" id="total-profit-value">+0</span>
+        </div>
+        <div class="stat-block">
+          <span class="stat-label">最高連チャン</span>
+          <span class="stat-value" id="max-chain-value">0連</span>
+        </div>
+      </div>
+
+      <div class="hrow hrow-holds" id="holds-row" hidden>
+        <div class="hold-icon" data-slot="0"></div>
+        <div class="hold-icon" data-slot="1"></div>
+        <div class="hold-icon" data-slot="2"></div>
+        <div class="hold-icon" data-slot="3"></div>
+      </div>
+
+      <div class="hrow hrow-rush-status" id="rush-status-row" hidden>
+        <div class="esup-block">
+          <div class="esup-label">ST残り</div>
+          <div class="esup-value" id="st-remaining-value">－</div>
+        </div>
+        <div class="esup-block">
+          <div class="esup-label">連チャン</div>
+          <div class="esup-value" id="chain-count-value">0</div>
+        </div>
+        <div class="esup-block">
+          <div class="esup-label">獲得出玉</div>
+          <div class="esup-value" id="rush-balls-value">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="main-screen">
+      <div id="start-controls">
+        <div class="select-block">
+          <span class="ctrl-label">回転効率</span>
+          <select id="rate-select"></select>
+        </div>
+        <div class="select-block">
+          <span class="ctrl-label">先バレ信頼度</span>
+          <select id="confidence-select"></select>
+        </div>
+        <div class="select-block">
+          <span class="ctrl-label">演出モード</span>
+          <select id="mode-select"></select>
+        </div>
+        <button type="button" class="btn-start" id="start-btn">スタート</button>
+      </div>
+
+      <div id="overlay" hidden>
+        <div id="overlay-box"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="logic.js"></script>
+  <script src="rush-view-engine.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
