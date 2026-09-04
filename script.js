@@ -244,6 +244,56 @@ function showTsukiyamaCountdown(onDone) {
   step();
 }
 
+// ---- RUSH終了 ----
+
+function finishRush() {
+  const chain = game.revealedChain;
+  const balls = game.rushBalls;
+  const profit = ballsToYen(balls) - game.investment.toushi;
+
+  game.stats.totalPlays++;
+  game.stats.totalProfit += profit;
+  game.stats.maxChain = Math.max(game.stats.maxChain, chain);
+  game.stats.totalBalls += balls;
+  renderStats();
+
+  holdsRowEl.hidden = true;
+  rushStatusRowEl.hidden = true;
+
+  showOverlay(popupHtml(`
+    <div class="rush-result-title">RUSH終了</div>
+    <div class="rush-result-box">
+      <div class="result-row highlight">
+        <span class="rr-label">連チャン数</span>
+        <span class="rr-val gold">${chain}連</span>
+      </div>
+      <div class="result-row">
+        <span class="rr-label">獲得出玉</span>
+        <span class="rr-val gold">${balls.toLocaleString()}発</span>
+      </div>
+      <div class="result-row">
+        <span class="rr-label">投資額</span>
+        <span class="rr-val">${game.investment.toushi.toLocaleString()}円</span>
+      </div>
+      <hr class="result-hr">
+      <div class="result-row highlight">
+        <span class="rr-label">収支</span>
+        <span class="rr-val gold">${profit >= 0 ? '+' : ''}${profit.toLocaleString()}円</span>
+      </div>
+    </div>
+    <button type="button" class="btn-action" id="restart-btn">もう一度スタート</button>
+  `));
+  document.getElementById('restart-btn').addEventListener('click', restartFlow);
+}
+
+function restartFlow() {
+  hideOverlay();
+  startControlsEl.hidden = false;
+  rateSelectEl.disabled = false;
+  confidenceSelectEl.disabled = false;
+  modeSelectEl.disabled = false;
+}
+
 // ---- 初期化 ----
 
 document.addEventListener('DOMContentLoaded', () => {
