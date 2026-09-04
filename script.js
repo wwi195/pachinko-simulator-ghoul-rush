@@ -5,6 +5,13 @@ const game = {
   confidence: DEFAULT_ENZOKU_CONFIDENCE,
   mode: DEFAULT_RUSH_MODE,
   investment: null,
+  rush: null,
+  stCountConst: 0,
+  holds: [],
+  rushGenerationDone: false,
+  rushBalls: 0,
+  revealedStRemaining: 0,
+  revealedChain: 0,
   stats: { totalPlays: 0, totalProfit: 0, maxChain: 0, totalBalls: 0 },
   pendingTimeoutId: null,
 };
@@ -110,6 +117,131 @@ function showRushEntry() {
     hideOverlay();
     enterRush();
   }, 2000);
+}
+
+// ---- RUSH中：保留システム ----
+
+function enterRush() {
+  game.rush = createRushState();
+  game.stCountConst = game.rush.stRemaining;
+  game.holds = [];
+  game.rushGenerationDone = false;
+  game.rushBalls = 0;
+  game.revealedStRemaining = game.stCountConst;
+  game.revealedChain = 0;
+  holdsRowEl.hidden = false;
+  rushStatusRowEl.hidden = false;
+  renderRushStatus();
+  fillHoldQueue();
+  scheduleHoldConsume();
+}
+
+function fillHoldQueue() {
+  while (!game.rushGenerationDone && game.holds.length < MAX_HOLDS) {
+    const { rushState, outcome } = applyRushSpin(game.rush);
+    game.rush = rushState;
+    let color = rollHoldColor(outcome);
+    if (game.mode === 'rize' && (outcome === 'hit_small' || outcome === 'hit_big')) {
+      color = 'rainbow';
+    }
+    game.holds.push({ outcome, color });
+    if (outcome === 'st_end') {
+      game.rushGenerationDone = true;
+    }
+  }
+  renderHolds();
+}
+
+function renderHolds() {
+  holdIconEls.forEach((el, i) => {
+    const hold = game.holds[i];
+    el.className = 'hold-icon';
+    if (hold) el.classList.add(`hold-${hold.color}`);
+  });
+}
+
+function renderRushStatus() {
+  stRemainingValueEl.textContent = game.revealedStRemaining;
+  chainCountValueEl.textContent = game.revealedChain;
+  rushBallsValueEl.textContent = game.rushBalls.toLocaleString();
+}
+
+function scheduleHoldConsume() {
+  game.pendingTimeoutId = setTimeout(consumeNextHold, HOLD_CONSUME_INTERVAL_MS);
+}
+
+function consumeNextHold() {
+  const hold = game.holds.shift();
+  renderHolds();
+
+  if (hold.outcome === 'st_end') {
+    finishRush();
+    return;
+  }
+
+  if (hold.outcome === 'miss') {
+    game.revealedStRemaining -= 1;
+    renderRushStatus();
+    fillHoldQueue();
+    scheduleHoldConsume();
+    return;
+  }
+
+  const isBig = hold.outcome === 'hit_big';
+  const balls = isBig ? 5600 : 2800;
+  game.rushBalls += balls;
+  game.revealedChain += 1;
+  game.revealedStRemaining = game.stCountConst;
+  renderRushStatus();
+  showHitAnnouncement(isBig, game.revealedChain, () => {
+    hideOverlay();
+    fillHoldQueue();
+    scheduleHoldConsume();
+  });
+}
+
+// ---- 演出モード別の当選告知 ----
+
+function showHitAnnouncement(isBig, chainCount, onDone) {
+  const label = isBig ? '6000個' : '3000個';
+  const balls = isBig ? 5600 : 2800;
+  const baseHtml = `
+    <img src="画像/RUSH中　追加ボーナス演出.png" class="enzoku-img" alt="RUSHボーナス演出">
+    <div class="add-rush-title">${label}！</div>
+    <div class="chain-label">＋${balls}球 (${chainCount}連)</div>
+  `;
+
+  if (game.mode === 'tokigeki') {
+    showOverlay(popupHtml(`<div class="tokigeki-cutin">突撃！</div>${baseHtml}`));
+    game.pendingTimeoutId = setTimeout(onDone, 1800);
+    return;
+  }
+
+  if (game.mode === 'tsukiyama') {
+    showTsukiyamaCountdown(() => {
+      showOverlay(popupHtml(baseHtml));
+      game.pendingTimeoutId = setTimeout(onDone, 1200);
+    });
+    return;
+  }
+
+  // default / rize（rizeは保留取得時点の虹色一発告知が主眼のため、消化時はdefaultと同じ表示）
+  showOverlay(popupHtml(baseHtml));
+  game.pendingTimeoutId = setTimeout(onDone, 1200);
+}
+
+function showTsukiyamaCountdown(onDone) {
+  let count = 3;
+  const step = () => {
+    showOverlay(popupHtml(`<div class="tsukiyama-count">${count}</div>`));
+    if (count <= 1) {
+      game.pendingTimeoutId = setTimeout(onDone, 600);
+      return;
+    }
+    count--;
+    game.pendingTimeoutId = setTimeout(step, 600);
+  };
+  step();
 }
 
 // ---- 初期化 ----
