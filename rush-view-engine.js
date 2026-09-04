@@ -5,7 +5,7 @@ const {
   spinNormal,
   rollChargeLt,
   rollZugarLtChallenge,
-} = require('./logic.js');
+} = typeof require !== 'undefined' ? require('./logic.js') : window;
 
 const YEN_PER_BALL = 4;
 const BALLS_PER_1000YEN = 250;
