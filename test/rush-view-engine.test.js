@@ -99,3 +99,11 @@ test('MAX_HOLDS は4、HOLD_CONSUME_INTERVAL_MS は1400', () => {
   assert.equal(MAX_HOLDS, 4);
   assert.equal(HOLD_CONSUME_INTERVAL_MS, 1400);
 });
+
+const { RUSH_HIT_BALLS, rushHitBalls } = require('../rush-view-engine.js');
+
+test('rushHitBalls: hit_smallは2800球、hit_bigは5600球', () => {
+  assert.deepEqual(RUSH_HIT_BALLS, { hit_small: 2800, hit_big: 5600 });
+  assert.equal(rushHitBalls('hit_small'), 2800);
+  assert.equal(rushHitBalls('hit_big'), 5600);
+});

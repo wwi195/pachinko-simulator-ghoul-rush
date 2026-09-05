@@ -188,12 +188,11 @@ function consumeNextHold() {
   }
 
   const isBig = hold.outcome === 'hit_big';
-  const balls = isBig ? 5600 : 2800;
+  const balls = rushHitBalls(hold.outcome);
   game.rushBalls += balls;
   game.revealedChain += 1;
   game.revealedStRemaining = game.stCountConst;
-  renderRushStatus();
-  showHitAnnouncement(isBig, game.revealedChain, () => {
+  showHitAnnouncement(isBig, balls, game.revealedChain, () => {
     hideOverlay();
     fillHoldQueue();
     scheduleHoldConsume();
@@ -202,9 +201,8 @@ function consumeNextHold() {
 
 // ---- 演出モード別の当選告知 ----
 
-function showHitAnnouncement(isBig, chainCount, onDone) {
+function showHitAnnouncement(isBig, balls, chainCount, onDone) {
   const label = isBig ? '6000個' : '3000個';
-  const balls = isBig ? 5600 : 2800;
   const baseHtml = `
     <img src="画像/RUSH中　追加ボーナス演出.png" class="enzoku-img" alt="RUSHボーナス演出">
     <div class="add-rush-title">${label}！</div>
@@ -212,6 +210,7 @@ function showHitAnnouncement(isBig, chainCount, onDone) {
   `;
 
   if (game.mode === 'tokigeki') {
+    renderRushStatus();
     showOverlay(popupHtml(`<div class="tokigeki-cutin">突撃！</div>${baseHtml}`));
     game.pendingTimeoutId = setTimeout(onDone, 1800);
     return;
@@ -219,6 +218,7 @@ function showHitAnnouncement(isBig, chainCount, onDone) {
 
   if (game.mode === 'tsukiyama') {
     showTsukiyamaCountdown(() => {
+      renderRushStatus();
       showOverlay(popupHtml(baseHtml));
       game.pendingTimeoutId = setTimeout(onDone, 1200);
     });
@@ -226,6 +226,7 @@ function showHitAnnouncement(isBig, chainCount, onDone) {
   }
 
   // default / rize（rizeは保留取得時点の虹色一発告知が主眼のため、消化時はdefaultと同じ表示）
+  renderRushStatus();
   showOverlay(popupHtml(baseHtml));
   game.pendingTimeoutId = setTimeout(onDone, 1200);
 }

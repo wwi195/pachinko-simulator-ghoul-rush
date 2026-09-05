@@ -81,6 +81,12 @@ const DEFAULT_RUSH_MODE = 'default';
 const MAX_HOLDS = 4;
 const HOLD_CONSUME_INTERVAL_MS = 1400;
 
+const RUSH_HIT_BALLS = { hit_small: 2800, hit_big: 5600 };
+
+function rushHitBalls(outcome) {
+  return RUSH_HIT_BALLS[outcome];
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     YEN_PER_BALL,
@@ -94,5 +100,7 @@ if (typeof module !== 'undefined' && module.exports) {
     DEFAULT_RUSH_MODE,
     MAX_HOLDS,
     HOLD_CONSUME_INTERVAL_MS,
+    RUSH_HIT_BALLS,
+    rushHitBalls,
   };
 }
