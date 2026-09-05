@@ -1,11 +1,6 @@
 'use strict';
 
-const {
-  calcSpinCost,
-  spinNormal,
-  rollChargeLt,
-  rollZugarLtChallenge,
-} = typeof require !== 'undefined' ? require('./logic.js') : window;
+const _logic = typeof require !== 'undefined' ? require('./logic.js') : globalThis;
 
 const YEN_PER_BALL = 4;
 const BALLS_PER_1000YEN = 250;
@@ -22,7 +17,7 @@ function simulateInvestment(spinRate, confidence) {
   let spins = 0;
 
   for (;;) {
-    const cost = calcSpinCost(spinRate);
+    const cost = _logic.calcSpinCost(spinRate);
     if (mochiDama >= cost) {
       mochiDama -= cost;
     } else {
@@ -33,12 +28,12 @@ function simulateInvestment(spinRate, confidence) {
     }
     spins++;
 
-    const result = spinNormal(confidence);
+    const result = _logic.spinNormal(confidence);
     if (result === 'miss' || result === 'false_enzoku') continue;
 
     if (result === 'zugar') {
       mochiDama += 1400;
-      if (rollZugarLtChallenge()) {
+      if (_logic.rollZugarLtChallenge()) {
         return { spins, toushi, path: 'zugar' };
       }
       continue;
@@ -46,7 +41,7 @@ function simulateInvestment(spinRate, confidence) {
 
     // charge
     mochiDama += 280;
-    if (rollChargeLt()) {
+    if (_logic.rollChargeLt()) {
       return { spins, toushi, path: 'charge' };
     }
   }
