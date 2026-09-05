@@ -11,7 +11,10 @@ function ballsToYen(balls) {
 
 // 通常時を「zugar/chargeを経てLTに当選する」まで裏側で高速シミュレートし、
 // 投資額(円)・回転数・当選経路('zugar'|'charge')を返す。画面には結果だけを表示する。
-function simulateInvestment(spinRate, confidence) {
+// 先バレ信頼度(confidence)は「はずれ」と「先バレはずれ」の内訳比率にしか影響せず、
+// どちらも本ループでは同じ扱い(continue)のため、選択させる意味がない。
+// よって logic.js の DEFAULT_ENZOKU_CONFIDENCE で固定する。
+function simulateInvestment(spinRate) {
   let mochiDama = 0;
   let toushi = 0;
   let spins = 0;
@@ -28,7 +31,7 @@ function simulateInvestment(spinRate, confidence) {
     }
     spins++;
 
-    const result = _logic.spinNormal(confidence);
+    const result = _logic.spinNormal(_logic.DEFAULT_ENZOKU_CONFIDENCE);
     if (result === 'miss' || result === 'false_enzoku') continue;
 
     if (result === 'zugar') {
@@ -79,7 +82,18 @@ const RUSH_MODE_OPTIONS = [
 const DEFAULT_RUSH_MODE = 'default';
 
 const MAX_HOLDS = 4;
-const HOLD_CONSUME_INTERVAL_MS = 1400;
+
+const RUSH_SPEED_OPTIONS = [
+  { id: 'normal',  label: '通常',   intervalMs: 1400 },
+  { id: 'fast',    label: '速い',   intervalMs: 700 },
+  { id: 'fastest', label: '最速',   intervalMs: 350 },
+];
+const DEFAULT_RUSH_SPEED = 'normal';
+
+function rushSpeedIntervalMs(speedId) {
+  const option = RUSH_SPEED_OPTIONS.find((o) => o.id === speedId);
+  return option ? option.intervalMs : RUSH_SPEED_OPTIONS[0].intervalMs;
+}
 
 const RUSH_HIT_BALLS = { hit_small: 2800, hit_big: 5600 };
 
@@ -99,7 +113,9 @@ if (typeof module !== 'undefined' && module.exports) {
     RUSH_MODE_OPTIONS,
     DEFAULT_RUSH_MODE,
     MAX_HOLDS,
-    HOLD_CONSUME_INTERVAL_MS,
+    RUSH_SPEED_OPTIONS,
+    DEFAULT_RUSH_SPEED,
+    rushSpeedIntervalMs,
     RUSH_HIT_BALLS,
     rushHitBalls,
   };

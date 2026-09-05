@@ -29,9 +29,9 @@ test('ballsToYen: 280球は1120円', () => {
 });
 
 test('simulateInvestment: 1回転目でCHARGE即LT当選なら投資額1000円・1回転・charge経路', () => {
-  // spinNormal(40)の3draw: zugar外れ(0.999) / false_enzoku外れ(0.999) / charge成立(0)
+  // spinNormal(DEFAULT_ENZOKU_CONFIDENCE=40)の3draw: zugar外れ(0.999) / false_enzoku外れ(0.999) / charge成立(0)
   // 続くrollChargeLt()の1draw: LT当選(0)
-  const result = withMockRandom([0.999, 0.999, 0, 0], () => simulateInvestment(16, 40));
+  const result = withMockRandom([0.999, 0.999, 0, 0], () => simulateInvestment(16));
   assert.deepEqual(result, { spins: 1, toushi: 1000, path: 'charge' });
 });
 
@@ -41,7 +41,7 @@ test('simulateInvestment: CHARGE外れ→miss→図柄揃いでLTチャレンジ
     0.999, 0.999, 0.999,        // 2回転目: miss
     0, 0,                       // 3回転目: zugar成立, rollZugarLtChallenge成功
   ];
-  const result = withMockRandom(sequence, () => simulateInvestment(16, 40));
+  const result = withMockRandom(sequence, () => simulateInvestment(16));
   assert.deepEqual(result, { spins: 3, toushi: 1000, path: 'zugar' });
 });
 
@@ -82,7 +82,9 @@ const {
   RUSH_MODE_OPTIONS,
   DEFAULT_RUSH_MODE,
   MAX_HOLDS,
-  HOLD_CONSUME_INTERVAL_MS,
+  RUSH_SPEED_OPTIONS,
+  DEFAULT_RUSH_SPEED,
+  rushSpeedIntervalMs,
 } = require('../rush-view-engine.js');
 
 test('RUSH_MODE_OPTIONS はデフォルト+実機準拠3種の計4種', () => {
@@ -95,9 +97,27 @@ test('RUSH_MODE_OPTIONS はデフォルト+実機準拠3種の計4種', () => {
   assert.equal(DEFAULT_RUSH_MODE, 'default');
 });
 
-test('MAX_HOLDS は4、HOLD_CONSUME_INTERVAL_MS は1400', () => {
+test('MAX_HOLDS は4', () => {
   assert.equal(MAX_HOLDS, 4);
-  assert.equal(HOLD_CONSUME_INTERVAL_MS, 1400);
+});
+
+test('RUSH_SPEED_OPTIONS は通常/速い/最速の3段階、デフォルトは通常(1400ms)', () => {
+  assert.deepEqual(RUSH_SPEED_OPTIONS, [
+    { id: 'normal',  label: '通常', intervalMs: 1400 },
+    { id: 'fast',    label: '速い', intervalMs: 700 },
+    { id: 'fastest', label: '最速', intervalMs: 350 },
+  ]);
+  assert.equal(DEFAULT_RUSH_SPEED, 'normal');
+});
+
+test('rushSpeedIntervalMs: 各speed idに対応する間隔(ms)を返す', () => {
+  assert.equal(rushSpeedIntervalMs('normal'), 1400);
+  assert.equal(rushSpeedIntervalMs('fast'), 700);
+  assert.equal(rushSpeedIntervalMs('fastest'), 350);
+});
+
+test('rushSpeedIntervalMs: 不明なidはデフォルト(通常)にフォールバックする', () => {
+  assert.equal(rushSpeedIntervalMs('unknown'), 1400);
 });
 
 const { RUSH_HIT_BALLS, rushHitBalls } = require('../rush-view-engine.js');

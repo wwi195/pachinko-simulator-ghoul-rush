@@ -2,8 +2,8 @@
 
 const game = {
   spinRate: DEFAULT_SPIN_RATE,
-  confidence: DEFAULT_ENZOKU_CONFIDENCE,
   mode: DEFAULT_RUSH_MODE,
+  speed: DEFAULT_RUSH_SPEED,
   investment: null,
   rush: null,
   stCountConst: 0,
@@ -16,7 +16,7 @@ const game = {
   pendingTimeoutId: null,
 };
 
-let rateSelectEl, confidenceSelectEl, modeSelectEl, startBtnEl,
+let rateSelectEl, modeSelectEl, speedSelectEl, startBtnEl,
     overlayEl, overlayBoxEl, startControlsEl,
     totalPlaysValueEl, totalProfitValueEl, maxChainValueEl, totalBallsValueEl,
     holdsRowEl, holdIconEls, rushStatusRowEl,
@@ -24,8 +24,8 @@ let rateSelectEl, confidenceSelectEl, modeSelectEl, startBtnEl,
 
 function cacheDomRefs() {
   rateSelectEl = document.getElementById('rate-select');
-  confidenceSelectEl = document.getElementById('confidence-select');
   modeSelectEl = document.getElementById('mode-select');
+  speedSelectEl = document.getElementById('speed-select');
   startBtnEl = document.getElementById('start-btn');
   overlayEl = document.getElementById('overlay');
   overlayBoxEl = document.getElementById('overlay-box');
@@ -46,18 +46,18 @@ function populateSelects() {
   rateSelectEl.innerHTML = SPIN_RATE_OPTIONS.map(
     (rate) => `<option value="${rate}" ${rate === DEFAULT_SPIN_RATE ? 'selected' : ''}>${rate}回転／千円</option>`
   ).join('');
-  confidenceSelectEl.innerHTML = ENZOKU_CONFIDENCE_OPTIONS.map(
-    (c) => `<option value="${c}" ${c === DEFAULT_ENZOKU_CONFIDENCE ? 'selected' : ''}>${c}%</option>`
-  ).join('');
   modeSelectEl.innerHTML = RUSH_MODE_OPTIONS.map(
     (m) => `<option value="${m.id}" ${m.id === DEFAULT_RUSH_MODE ? 'selected' : ''}>${m.label}</option>`
+  ).join('');
+  speedSelectEl.innerHTML = RUSH_SPEED_OPTIONS.map(
+    (s) => `<option value="${s.id}" ${s.id === DEFAULT_RUSH_SPEED ? 'selected' : ''}>${s.label}</option>`
   ).join('');
 }
 
 function bindEvents() {
   rateSelectEl.addEventListener('change', () => { game.spinRate = Number(rateSelectEl.value); });
-  confidenceSelectEl.addEventListener('change', () => { game.confidence = Number(confidenceSelectEl.value); });
   modeSelectEl.addEventListener('change', () => { game.mode = modeSelectEl.value; });
+  speedSelectEl.addEventListener('change', () => { game.speed = speedSelectEl.value; });
   startBtnEl.addEventListener('click', startInvestmentFlow);
 }
 
@@ -90,10 +90,10 @@ function popupHtml(inner) {
 function startInvestmentFlow() {
   startControlsEl.hidden = true;
   rateSelectEl.disabled = true;
-  confidenceSelectEl.disabled = true;
   modeSelectEl.disabled = true;
+  speedSelectEl.disabled = true;
 
-  game.investment = simulateInvestment(game.spinRate, game.confidence);
+  game.investment = simulateInvestment(game.spinRate);
 
   showOverlay(popupHtml(`
     <div class="result-main charge">投資額 ${game.investment.toushi.toLocaleString()}円</div>
@@ -167,7 +167,7 @@ function renderRushStatus() {
 }
 
 function scheduleHoldConsume() {
-  game.pendingTimeoutId = setTimeout(consumeNextHold, HOLD_CONSUME_INTERVAL_MS);
+  game.pendingTimeoutId = setTimeout(consumeNextHold, rushSpeedIntervalMs(game.speed));
 }
 
 function consumeNextHold() {
@@ -291,8 +291,8 @@ function restartFlow() {
   hideOverlay();
   startControlsEl.hidden = false;
   rateSelectEl.disabled = false;
-  confidenceSelectEl.disabled = false;
   modeSelectEl.disabled = false;
+  speedSelectEl.disabled = false;
 }
 
 // ---- 初期化 ----
