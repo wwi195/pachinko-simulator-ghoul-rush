@@ -103,9 +103,9 @@ test('MAX_HOLDS は4', () => {
 
 test('RUSH_SPEED_OPTIONS は通常/速い/最速の3段階、デフォルトは通常(1400ms)', () => {
   assert.deepEqual(RUSH_SPEED_OPTIONS, [
-    { id: 'normal',  label: '通常', intervalMs: 1400 },
-    { id: 'fast',    label: '速い', intervalMs: 700 },
-    { id: 'fastest', label: '最速', intervalMs: 350 },
+    { id: 'normal',  label: '通常（実機と同様）', intervalMs: 1400 },
+    { id: 'fast',    label: '速い',             intervalMs: 700 },
+    { id: 'fastest', label: '最速',             intervalMs: 350 },
   ]);
   assert.equal(DEFAULT_RUSH_SPEED, 'normal');
 });

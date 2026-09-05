@@ -116,16 +116,26 @@ body {
   gap: 16px;
 }
 
+.intro-text {
+  width: 100%;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #999;
+  text-align: left;
+}
+
 .select-block {
   width: 100%;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 
-.ctrl-label { font-size: 13px; color: #aaa; }
+.ctrl-label { font-size: 12px; color: #aaa; }
 
 select {
+  width: 100%;
   background: #1a1a1a;
   color: #fff;
   border: 1px solid #444;
