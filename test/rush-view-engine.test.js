@@ -47,7 +47,7 @@ test('simulateInvestment: CHARGE外れ→miss→図柄揃いでLTチャレンジ
 
 const { HOLD_COLORS, HOLD_COLOR_WEIGHTS, rollHoldColor } = require('../rush-view-engine.js');
 
-test('HOLD_COLORS は白/点滅/青/緑/赤/虹の6段階', () => {
+test('HOLD_COLORS は無色/点滅/青/緑/赤/虹の6段階', () => {
   assert.deepEqual(HOLD_COLORS, ['none', 'flash', 'blue', 'green', 'red', 'rainbow']);
 });
 
@@ -58,7 +58,7 @@ test('HOLD_COLOR_WEIGHTS の各outcomeの重みは合計100', () => {
   }
 });
 
-test('rollHoldColor: missでrng=0はnone(白)', () => {
+test('rollHoldColor: missでrng=0はnone(無色)', () => {
   assert.equal(rollHoldColor('miss', () => 0), 'none');
 });
 
