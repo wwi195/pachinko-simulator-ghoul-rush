@@ -536,7 +536,7 @@ git commit -m "feat: index.htmlの骨組みを作成"
 **Files:**
 - Create: `C:\Users\ab_99\pachinko-simulator-ghoul-rush\style.css`
 
-- [ ] **Step 1: style.css を作成**
+- [x] **Step 1: style.css を作成**
 
 ```css
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -861,7 +861,7 @@ select {
 .btn-action:active { opacity: 0.75; transform: scale(0.97); }
 ```
 
-- [ ] **Step 2: コミット**
+- [x] **Step 2: コミット**
 
 ```bash
 git add style.css
@@ -875,7 +875,7 @@ git commit -m "feat: style.cssを作成"
 **Files:**
 - Create: `C:\Users\ab_99\pachinko-simulator-ghoul-rush\script.js`
 
-- [ ] **Step 1: script.js を新規作成し、状態・DOM参照・開始画面〜RUSH突入演出までを実装**
+- [x] **Step 1: script.js を新規作成し、状態・DOM参照・開始画面〜RUSH突入演出までを実装**
 
 ```js
 'use strict';
@@ -1006,11 +1006,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 > **注記：** Task 5完了後に `index.html` へ `total-balls-value`（総獲得出玉の表示枠）が追加されたため、このTask 7のコード例はそれを前提に `totalBallsValueEl` の取得と `renderStats()` での更新を含めてある（当初案から更新済み）。
 
-- [ ] **Step 2: ブラウザで開始画面が表示されることを確認**
+- [x] **Step 2: ブラウザで開始画面が表示されることを確認**
 
 `index.html` をブラウザで直接開く。回転効率・先バレ信頼度・演出モードのプルダウンと「スタート」ボタンが表示されることを確認する（スタートボタンを押すと `enterRush is not defined` エラーになるのは想定内、次タスクで解消する）。
 
-- [ ] **Step 3: コミット**
+- [x] **Step 3: コミット**
 
 ```bash
 git add script.js
@@ -1024,7 +1024,7 @@ git commit -m "feat: 開始画面〜投資額シミュレーション〜RUSH突�
 **Files:**
 - Modify: `C:\Users\ab_99\pachinko-simulator-ghoul-rush\script.js`
 
-- [ ] **Step 1: `game` オブジェクトにRUSH中の状態を追加**
+- [x] **Step 1: `game` オブジェクトにRUSH中の状態を追加**
 
 `script.js` の `game` オブジェクト定義を以下に置き換える:
 
@@ -1046,7 +1046,7 @@ const game = {
 };
 ```
 
-- [ ] **Step 2: RUSH中の保留システムを実装**
+- [x] **Step 2: RUSH中の保留システムを実装**
 
 `showRushEntry()` の直後（`// ---- 初期化 ----` の直前）に追記:
 
@@ -1177,11 +1177,11 @@ function showTsukiyamaCountdown(onDone) {
 }
 ```
 
-- [ ] **Step 3: ブラウザでRUSH中の保留・消化・演出モードの挙動を確認**
+- [x] **Step 3: ブラウザでRUSH中の保留・消化・演出モードの挙動を確認**
 
 `index.html` をブラウザで開き、スタート→投資額表示→経路テロップ→LT突入→RUSH中へと自動的に進むことを確認する。保留アイコン（最大4個）が上部に表示され、一定間隔で先頭から消化されて当選演出（3000個/6000個）またはミスとして処理されていくことを確認する。演出モードのプルダウンを「突撃」「月山絶叫」に切り替えて再度スタートし、それぞれ専用の演出（カットイン／カウントダウン）が表示されることを確認する。「リゼ襲来」に切り替えた場合は、当選が確定した保留がキューに積まれた時点で虹色になっていることを確認する（RUSH終了までは時間がかかるため、`HOLD_CONSUME_INTERVAL_MS` を一時的に短くして確認してもよい）。
 
-- [ ] **Step 4: コミット**
+- [x] **Step 4: コミット**
 
 ```bash
 git add script.js
@@ -1195,7 +1195,7 @@ git commit -m "feat: RUSH中の保留キュー・消化ループ・演出モー�
 **Files:**
 - Modify: `C:\Users\ab_99\pachinko-simulator-ghoul-rush\script.js`
 
-- [ ] **Step 1: RUSH終了処理を実装**
+- [x] **Step 1: RUSH終了処理を実装**
 
 `showTsukiyamaCountdown` の後、`// ---- 初期化 ----` の直前に追記:
 
@@ -1251,11 +1251,11 @@ function restartFlow() {
 }
 ```
 
-- [ ] **Step 2: ブラウザでRUSH終了〜もう一度スタートの一連の流れを確認**
+- [x] **Step 2: ブラウザでRUSH終了〜もう一度スタートの一連の流れを確認**
 
 `index.html` をブラウザで開き、RUSHが終了すると「連チャン数」「獲得出玉」「投資額」「収支」を表示した結果画面が出ることを確認する。「もう一度スタート」を押すと開始画面に戻り、プルダウンが再度操作可能になることを確認する。2周目を回した後、ヘッダーの「プレイ回数」が2、「累計収支」「最高連チャン」「総獲得出玉」が2周分の内容で更新されていることを確認する。
 
-- [ ] **Step 3: コミット**
+- [x] **Step 3: コミット**
 
 ```bash
 git add script.js
@@ -1270,7 +1270,7 @@ git commit -m "feat: RUSH終了・累計成績・もう一度スタートを実�
 - Create: `C:\Users\ab_99\pachinko-simulator-ghoul-rush\README.md`
 - Create: `C:\Users\ab_99\pachinko-simulator-ghoul-rush\docs\simulator-design.md`
 
-- [ ] **Step 1: README.md を作成**
+- [x] **Step 1: README.md を作成**
 
 ```markdown
 # パチンコシミュレーター（東京喰種版・RUSH演出ver）
@@ -1305,7 +1305,7 @@ npm test
 - 保留色ランク・演出モードの実機完全再現（Web調査に基づく参考値。後日精度が上がった情報に差し替え可能）
 ```
 
-- [ ] **Step 2: docs/simulator-design.md を作成**
+- [x] **Step 2: docs/simulator-design.md を作成**
 
 ```markdown
 # 東京喰種版パチンコシミュレーター「RUSH演出ver」設計書
@@ -1366,7 +1366,7 @@ RUSH開始前に、デフォルトと実機準拠の3種（突撃／リゼ襲来
 - フレームワークは使わず、素のHTML/CSS/JavaScriptのみ
 ```
 
-- [ ] **Step 3: コミット**
+- [x] **Step 3: コミット**
 
 ```bash
 git add README.md docs/simulator-design.md
@@ -1379,12 +1379,12 @@ git commit -m "docs: README・仕組み解説ドキュメントを追加"
 
 **Files:** なし（確認のみ）
 
-- [ ] **Step 1: 全ユニットテストを実行**
+- [x] **Step 1: 全ユニットテストを実行**
 
 Run: `npm test`
 Expected: PASS（`rush-view-engine.test.js` の全件が成功、13件）
 
-- [ ] **Step 2: ブラウザで一連の流れを通しで確認**
+- [x] **Step 2: ブラウザで一連の流れを通しで確認**
 
 `index.html` をブラウザで直接開き、以下を一通り確認する:
 
@@ -1393,7 +1393,28 @@ Expected: PASS（`rush-view-engine.test.js` の全件が成功、13件）
 - 4種類の演出モードそれぞれで、告知の見せ方が異なることを確認する
 - 「もう一度スタート」で次の周回に進み、累計成績（プレイ回数・累計収支・最高連チャン・総獲得出玉）が正しく積算されることを確認する
 
-- [ ] **Step 3: git status で未コミットの変更がないことを確認**
+- [x] **Step 3: git status で未コミットの変更がないことを確認**
 
 Run: `git status`
 Expected: `nothing to commit, working tree clean`
+
+---
+
+## 実装完了後の記録
+
+全11タスク実装完了。実装完了後、Opusモデルによる実装全体の最終ホリスティックレビューを実施し、以下の重大なバグを発見・修正した（個別タスクごとのレビューでは検出できなかったもの）。
+
+### 修正済み
+
+- **重大（ブラウザで一切動作しない）**：`rush-view-engine.js` が `logic.js` の関数（`calcSpinCost`等）と同名の `const` 分割代入を行っており、両ファイルが素の`<script>`タグとして共有グローバルスコープに読み込まれるブラウザ環境では構文エラー（`SyntaxError: Identifier has already been declared`）でページ全体が起動不能になっていた（`node --test`はNode.jsのモジュールスコープ分離のため検出不可）。名前空間オブジェクト方式に変更して解消（`358df57`→`c8c422f`で最終修正）。再発防止のため`vm`モジュールでブラウザの共有スコープ読み込みを再現する回帰テスト`test/browser-load.test.js`を追加。
+- **重要**：当選演出（突撃のカットイン・月山絶叫のカウントダウン）の最中に、ヘッダーの連チャン数・獲得出玉が演出より先に更新されてしまいネタバレになっていた問題を修正（`69bcc1d`）。
+- **重要**：当選時の払い出し球数（2800/5600）が`logic.js`・`script.js`の2箇所（3回）で独立して重複定義されていたのを`rush-view-engine.js`の`rushHitBalls()`に一元化（`69bcc1d`）。
+- **軽微**：設計書・テスト名での保留色表記の不統一（「白」→「無色（グレー）」、実装の`#3a3a3a`ダークグレーに合わせて統一）。
+
+### 今回は見送った項目（ユーザー判断待ち）
+
+- RUSH中に保留が残り4個未満に減ることで、ST終了が近いことがプレイヤーに見えてしまい、設計書が意図した「最後まで期待感を持たせる」演出が薄れる（保留を常に4個表示に見せかける等の対応が必要、UI設計の再検討を伴う）
+- RUSH中に中断・早送りする手段が一切ない（1RUSH平均約280回転×1.4秒≒6.5分、長い連チャンだとさらに長時間。演出モードを比較したいだけのユーザーには不便）
+- リゼ襲来モードは「保留の虹色を強制する」以上の専用ビジュアルがなく、演出としての差別化が弱い
+- 月山絶叫のカウントダウンは数字のみで、設計書が言う「ボタン風」の見た目にはなっていない
+- `.result-main.win`/`.result-main.lose`（style.css）が未使用（現状winは使わずchargeとrushのみ使用）
