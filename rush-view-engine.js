@@ -16,7 +16,8 @@ function ballsToYen(balls) {
 
 // 通常時を「zugar/chargeを経てLTに当選する」まで裏側で高速シミュレートし、
 // 投資額(円)・回転数・当選経路('zugar'|'charge')・道中に起きたチャージ/図柄揃いの
-// 回数を返す。画面には結果だけを表示する(道中の詳細は投資額表示の下に小さく添える)。
+// 回数と、その一つ一つの詳細(events：発生回転数・種別・結果・その時点までの消費球数)を返す。
+// 画面には結果の要約を表示し、道中の詳細(events)は履歴欄に記録する。
 // 先バレ信頼度(confidence)は「はずれ」と「先バレはずれ」の内訳比率にしか影響せず、
 // どちらも本ループでは同じ扱い(continue)のため、選択させる意味がない。
 // よって logic.js の DEFAULT_ENZOKU_CONFIDENCE で固定する。
@@ -26,6 +27,7 @@ function simulateInvestment(spinRate) {
   let spins = 0;
   let chargeCount = 0;
   let zugarCount = 0;
+  const events = [];
 
   for (;;) {
     const cost = _logic.calcSpinCost(spinRate);
@@ -45,8 +47,10 @@ function simulateInvestment(spinRate) {
     if (result === 'zugar') {
       zugarCount++;
       mochiDama += 1400;
-      if (_logic.rollZugarLtChallenge()) {
-        return { spins, toushi, path: 'zugar', chargeCount, zugarCount };
+      const win = _logic.rollZugarLtChallenge();
+      events.push({ spins, type: 'zugar', win, ballsUsed: toushi / YEN_PER_BALL });
+      if (win) {
+        return { spins, toushi, path: 'zugar', chargeCount, zugarCount, events };
       }
       continue;
     }
@@ -54,8 +58,10 @@ function simulateInvestment(spinRate) {
     // charge
     chargeCount++;
     mochiDama += 280;
-    if (_logic.rollChargeLt()) {
-      return { spins, toushi, path: 'charge', chargeCount, zugarCount };
+    const win = _logic.rollChargeLt();
+    events.push({ spins, type: 'charge', win, ballsUsed: toushi / YEN_PER_BALL });
+    if (win) {
+      return { spins, toushi, path: 'charge', chargeCount, zugarCount, events };
     }
   }
 }

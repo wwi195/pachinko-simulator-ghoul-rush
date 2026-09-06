@@ -28,21 +28,38 @@ test('ballsToYen: 280球は1120円', () => {
   assert.equal(ballsToYen(280), 1120);
 });
 
-test('simulateInvestment: 1回転目でCHARGE即LT当選なら投資額1000円・1回転・charge経路、道中チャージ1回', () => {
+test('simulateInvestment: 1回転目でCHARGE即LT当選なら投資額1000円・1回転・charge経路、道中チャージ1回、events1件', () => {
   // spinNormal(DEFAULT_ENZOKU_CONFIDENCE=40)の3draw: zugar外れ(0.999) / false_enzoku外れ(0.999) / charge成立(0)
   // 続くrollChargeLt()の1draw: LT当選(0)
   const result = withMockRandom([0.999, 0.999, 0, 0], () => simulateInvestment(16));
-  assert.deepEqual(result, { spins: 1, toushi: 1000, path: 'charge', chargeCount: 1, zugarCount: 0 });
+  assert.deepEqual(result, {
+    spins: 1,
+    toushi: 1000,
+    path: 'charge',
+    chargeCount: 1,
+    zugarCount: 0,
+    events: [{ spins: 1, type: 'charge', win: true, ballsUsed: 250 }],
+  });
 });
 
-test('simulateInvestment: CHARGE外れ→miss→図柄揃いでLTチャレンジ成功なら3回転・投資額1000円・zugar経路、道中チャージ1回', () => {
+test('simulateInvestment: CHARGE外れ→miss→図柄揃いでLTチャレンジ成功なら3回転・投資額1000円・zugar経路、events2件', () => {
   const sequence = [
     0.999, 0.999, 0, 0.5,       // 1回転目: charge成立, rollChargeLt外れ
     0.999, 0.999, 0.999,        // 2回転目: miss
     0, 0,                       // 3回転目: zugar成立, rollZugarLtChallenge成功
   ];
   const result = withMockRandom(sequence, () => simulateInvestment(16));
-  assert.deepEqual(result, { spins: 3, toushi: 1000, path: 'zugar', chargeCount: 1, zugarCount: 1 });
+  assert.deepEqual(result, {
+    spins: 3,
+    toushi: 1000,
+    path: 'zugar',
+    chargeCount: 1,
+    zugarCount: 1,
+    events: [
+      { spins: 1, type: 'charge', win: false, ballsUsed: 250 },
+      { spins: 3, type: 'zugar', win: true, ballsUsed: 250 },
+    ],
+  });
 });
 
 const { HOLD_COLORS, HOLD_COLOR_WEIGHTS, rollHoldColor } = require('../rush-view-engine.js');

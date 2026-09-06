@@ -15,6 +15,7 @@ const game = {
   stats: { totalPlays: 0, totalProfit: 0, maxChain: 0, totalBalls: 0 },
   pendingTimeoutId: null,
   paused: false,
+  skipping: false,
   history: [],
 };
 
@@ -25,7 +26,7 @@ let rateSelectEl, modeSelectEl, speedSelectEl, startBtnEl,
     totalPlaysValueEl, totalProfitValueEl, maxChainValueEl, totalBallsValueEl,
     holdsRowEl, holdIconEls, rushStatusRowEl,
     stRemainingValueEl, chainCountValueEl, rushBallsValueEl,
-    pauseRowEl, pauseBtnEl, rushSpeedBtnsEl, holdLegendBodyEl,
+    pauseRowEl, pauseBtnEl, endRushBtnEl, rushSpeedBtnsEl, holdLegendBodyEl,
     introTabBtnEl, introTextEl, historyListEl;
 
 function cacheDomRefs() {
@@ -48,6 +49,7 @@ function cacheDomRefs() {
   rushBallsValueEl = document.getElementById('rush-balls-value');
   pauseRowEl = document.getElementById('pause-row');
   pauseBtnEl = document.getElementById('pause-btn');
+  endRushBtnEl = document.getElementById('end-rush-btn');
   rushSpeedBtnsEl = document.getElementById('rush-speed-btns');
   holdLegendBodyEl = document.getElementById('hold-legend-body');
   introTabBtnEl = document.getElementById('intro-tab-btn');
@@ -99,6 +101,7 @@ function bindEvents() {
     renderRushSpeedButtons();
   });
   pauseBtnEl.addEventListener('click', togglePause);
+  endRushBtnEl.addEventListener('click', endRushNow);
   introTabBtnEl.addEventListener('click', () => {
     introTextEl.hidden = !introTextEl.hidden;
     introTabBtnEl.textContent = introTextEl.hidden ? '説明を見る' : '説明を閉じる';
@@ -122,6 +125,20 @@ function togglePause() {
   }
 }
 
+// 「終了する」：以後の保留消化を演出待ちなしで即座に進め、RUSH終了(st_end)まで自動で消化しきる。
+// 既に表示中の演出はそのまま最後まで見せ、次の一歩から即時消化に切り替わる。
+function endRushNow() {
+  if (game.skipping) return;
+  game.skipping = true;
+  game.paused = false;
+  pauseBtnEl.disabled = true;
+  endRushBtnEl.disabled = true;
+  showOverlay(popupHtml('<div class="result-main charge">スキップ中…</div>'));
+  if (game.pendingTimeoutId === null) {
+    scheduleHoldConsume();
+  }
+}
+
 function renderStats() {
   totalPlaysValueEl.textContent = game.stats.totalPlays.toLocaleString();
   const profit = game.stats.totalProfit;
@@ -134,8 +151,10 @@ function renderStats() {
 
 // ---- 履歴(常時表示) ----
 
-function addHistoryEntry(spins, profit) {
-  game.history.unshift({ spins, profit });
+const EVENT_TYPE_LABELS = { charge: 'チャージ', zugar: '図柄揃い' };
+
+function addHistoryEntry(spins, profit, events) {
+  game.history.unshift({ spins, profit, events });
   if (game.history.length > HISTORY_MAX_ITEMS) game.history.pop();
   renderHistory();
 }
@@ -149,10 +168,18 @@ function renderHistory() {
     const n = game.history.length - i;
     const cls = entry.profit > 0 ? 'green' : entry.profit < 0 ? 'red' : 'gold';
     const sign = entry.profit >= 0 ? '+' : '';
+    const eventsHtml = entry.events.map((ev) => {
+      const label = EVENT_TYPE_LABELS[ev.type];
+      const resultText = ev.win ? 'RUSH当たり！' : '通常へ';
+      return `<div class="history-event-line ${ev.win ? 'win' : ''}">${ev.spins.toLocaleString()}回転目 ${label}発生 → ${resultText}（${Math.round(ev.ballsUsed).toLocaleString()}発消費）</div>`;
+    }).join('');
     return `
-      <div class="history-item">
-        <span class="hi-n">${n}回目：大当たりまで${entry.spins.toLocaleString()}回転</span>
-        <span class="hi-profit ${cls}">${sign}${entry.profit.toLocaleString()}円</span>
+      <div class="history-entry">
+        <div class="history-item">
+          <span class="hi-n">${n}回目：大当たりまで${entry.spins.toLocaleString()}回転</span>
+          <span class="hi-profit ${cls}">${sign}${entry.profit.toLocaleString()}円</span>
+        </div>
+        <div class="history-events">${eventsHtml}</div>
       </div>
     `;
   }).join('');
@@ -219,11 +246,14 @@ function enterRush() {
   game.revealedStRemaining = game.stCountConst;
   game.revealedChain = 0;
   game.paused = false;
+  game.skipping = false;
   holdsRowEl.hidden = false;
   rushStatusRowEl.hidden = false;
   pauseRowEl.hidden = false;
   pauseBtnEl.textContent = '一時停止';
   pauseBtnEl.classList.remove('active');
+  pauseBtnEl.disabled = false;
+  endRushBtnEl.disabled = false;
   renderRushSpeedButtons();
   renderRushStatus();
   fillHoldQueue();
@@ -265,7 +295,8 @@ function scheduleHoldConsume() {
     game.pendingTimeoutId = null;
     return;
   }
-  game.pendingTimeoutId = setTimeout(consumeNextHold, rushSpeedIntervalMs(game.speed));
+  const delay = game.skipping ? 0 : rushSpeedIntervalMs(game.speed);
+  game.pendingTimeoutId = setTimeout(consumeNextHold, delay);
 }
 
 function consumeNextHold() {
@@ -300,6 +331,12 @@ function consumeNextHold() {
 // ---- 演出モード別の当選告知 ----
 
 function showHitAnnouncement(isBig, balls, chainCount, onDone) {
+  if (game.skipping) {
+    renderRushStatus();
+    game.pendingTimeoutId = setTimeout(onDone, 0);
+    return;
+  }
+
   const label = isBig ? '6000個' : '3000個';
   const baseHtml = `
     <img src="画像/RUSH中　追加ボーナス演出.png" class="enzoku-img" alt="RUSHボーナス演出">
@@ -355,8 +392,9 @@ function finishRush() {
   game.stats.maxChain = Math.max(game.stats.maxChain, chain);
   game.stats.totalBalls += balls;
   renderStats();
-  addHistoryEntry(game.investment.spins, profit);
+  addHistoryEntry(game.investment.spins, profit, game.investment.events);
 
+  game.skipping = false;
   holdsRowEl.hidden = true;
   rushStatusRowEl.hidden = true;
   pauseRowEl.hidden = true;
@@ -383,8 +421,10 @@ function finishRush() {
       </div>
     </div>
     <button type="button" class="btn-action" id="restart-btn">もう一度スタート</button>
+    <button type="button" class="btn-sub" id="reset-btn">最初に戻る</button>
   `));
   document.getElementById('restart-btn').addEventListener('click', restartFlow);
+  document.getElementById('reset-btn').addEventListener('click', () => location.reload());
 }
 
 function restartFlow() {

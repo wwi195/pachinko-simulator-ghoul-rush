@@ -96,9 +96,15 @@ body {
 .esup-label { font-size: 10px; color: #666; }
 .esup-value { font-size: 18px; font-weight: bold; color: #f0c040; }
 
-.hrow-pause-row {
-  justify-content: space-between;
-  padding: 6px 12px;
+.hrow-speed-row {
+  justify-content: center;
+  padding: 6px 12px 3px;
+}
+
+.hrow-pause-btns {
+  justify-content: center;
+  gap: 10px;
+  padding: 3px 12px 6px;
 }
 
 .speed-btns { display: flex; gap: 6px; }
@@ -133,6 +139,14 @@ body {
   background: #3d0000;
   border-color: #ff3333;
   color: #ff5555;
+}
+.btn-pause.end {
+  border-color: #995500;
+  color: #ffaa55;
+}
+.btn-pause:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 #main-screen {
@@ -404,6 +418,18 @@ select {
 }
 .btn-action:active { opacity: 0.75; transform: scale(0.97); }
 
+.btn-sub {
+  font-size: 13px;
+  color: #888;
+  background: none;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 8px 20px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+.btn-sub:active { opacity: 0.7; }
+
 /* ========== 履歴パネル(常時表示) ========== */
 #history-panel {
   background: #0a0a0a;
@@ -423,17 +449,32 @@ select {
   background: #0a0a0a;
 }
 
+.history-entry {
+  padding: 5px 12px;
+  border-bottom: 1px solid #181818;
+}
+
 .history-item {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  padding: 5px 12px;
-  border-bottom: 1px solid #181818;
   color: #999;
 }
 .history-item .hi-profit.green { color: #44cc88; }
 .history-item .hi-profit.red   { color: #cc6666; }
 .history-item .hi-profit.gold  { color: #f0c040; }
+
+.history-events {
+  margin-top: 3px;
+  padding-left: 8px;
+  border-left: 2px solid #222;
+}
+.history-event-line {
+  font-size: 10px;
+  color: #666;
+  padding: 1px 0;
+}
+.history-event-line.win { color: #ff8855; }
 
 .history-empty {
   font-size: 11px;
