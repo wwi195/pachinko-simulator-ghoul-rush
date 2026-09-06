@@ -63,13 +63,14 @@ function simulateInvestment(spinRate) {
 const HOLD_COLORS = ['none', 'flash', 'blue', 'green', 'red', 'rainbow'];
 
 // 保留取得時に、実際の抽選結果(outcome)に応じて先読み示唆の色を確率的に選ぶ。
-// 東京喰種実機のRUSH中保留変化(p-town.dmm.com/nana-press.com等の解析記事)を
-// 参考にした演出用の重み。実機情報の精度が上がった際はこの表だけ差し替えればよい。
+// 指定された信頼度(holdColorHitRateで計算した「見えている色から見た実際の当選率」が
+// 無色1%/点滅7%/青33%/緑55%/赤95%/虹確定 になるよう、P_RUSH・P_RUSH_BIGを踏まえて
+// 逆算した重み。hit_small/hit_bigは区別せず同じ重みを使う(信頼度は当選サイズを問わない)。
 const HOLD_COLOR_WEIGHTS = {
-  miss:      { none: 84, flash: 10, blue: 4,  green: 1.5, red: 0.5, rainbow: 0 },
-  st_end:    { none: 84, flash: 10, blue: 4,  green: 1.5, red: 0.5, rainbow: 0 },
-  hit_small: { none: 0,  flash: 5,  blue: 15, green: 30,  red: 40,  rainbow: 10 },
-  hit_big:   { none: 0,  flash: 0,  blue: 5,  green: 15,  red: 40,  rainbow: 40 },
+  miss:      { none: 99.8365147903017, flash: 0.1408877442811695, blue: 0.017224203862591984, green: 0.005205822809216234, red: 0.00016743874532566854, rainbow: 0 },
+  st_end:    { none: 99.8365147903017, flash: 0.1408877442811695, blue: 0.017224203862591984, green: 0.005205822809216234, red: 0.00016743874532566854, rainbow: 0 },
+  hit_small: { none: 95.09680146187323, flash: 1, blue: 0.8, green: 0.6, red: 0.3, rainbow: 2.2031985381267716 },
+  hit_big:   { none: 95.09680146187323, flash: 1, blue: 0.8, green: 0.6, red: 0.3, rainbow: 2.2031985381267716 },
 };
 
 function rollHoldColor(outcome, rng = Math.random) {

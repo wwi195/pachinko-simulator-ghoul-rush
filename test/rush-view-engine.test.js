@@ -51,27 +51,31 @@ test('HOLD_COLORS は無色/点滅/青/緑/赤/虹の6段階', () => {
   assert.deepEqual(HOLD_COLORS, ['none', 'flash', 'blue', 'green', 'red', 'rainbow']);
 });
 
-test('HOLD_COLOR_WEIGHTS の各outcomeの重みは合計100', () => {
+test('HOLD_COLOR_WEIGHTS の各outcomeの重みは合計約100(浮動小数点誤差を許容)', () => {
   for (const outcome of Object.keys(HOLD_COLOR_WEIGHTS)) {
     const total = HOLD_COLORS.reduce((sum, c) => sum + HOLD_COLOR_WEIGHTS[outcome][c], 0);
-    assert.equal(total, 100, `outcome=${outcome}`);
+    assert.ok(Math.abs(total - 100) < 1e-6, `outcome=${outcome}, total=${total}`);
   }
 });
 
-test('rollHoldColor: missでrng=0はnone(無色)', () => {
+test('rollHoldColor: missでrng=0はnone(無色、圧倒的多数派)', () => {
   assert.equal(rollHoldColor('miss', () => 0), 'none');
 });
 
-test('rollHoldColor: missでrng=0.999はred(missの中で最高ランク)', () => {
-  assert.equal(rollHoldColor('miss', () => 0.999), 'red');
+test('rollHoldColor: missでrng=0.999はflash(noneの次に多いランク)', () => {
+  assert.equal(rollHoldColor('miss', () => 0.999), 'flash');
+});
+
+test('rollHoldColor: missでrng=0.9999999はred(missの中で最高ランク、出現率0.0002%未満)', () => {
+  assert.equal(rollHoldColor('miss', () => 0.9999999), 'red');
 });
 
 test('rollHoldColor: st_endはmissと同じ重みなのでrng=0はnone', () => {
   assert.equal(rollHoldColor('st_end', () => 0), 'none');
 });
 
-test('rollHoldColor: hit_bigはnone/flashの重みが0なのでrng=0でもblueになる', () => {
-  assert.equal(rollHoldColor('hit_big', () => 0), 'blue');
+test('rollHoldColor: hit_bigでもrng=0はnone(当選時ですらnoneが最多)', () => {
+  assert.equal(rollHoldColor('hit_big', () => 0), 'none');
 });
 
 test('rollHoldColor: hit_smallでrng=0.999はrainbow', () => {
@@ -87,8 +91,8 @@ function assertClose(actual, expected, epsilon = 0.001) {
   );
 }
 
-test('holdColorHitRate: 無色はほぼ0%、虹は100%(当選濃厚)', () => {
-  assertClose(holdColorHitRate('none'), 0);
+test('holdColorHitRate: 無色は1%、虹は100%(当選濃厚)', () => {
+  assertClose(holdColorHitRate('none'), 0.01, 0.0001);
   assert.equal(holdColorHitRate('rainbow'), 1);
 });
 
@@ -99,9 +103,12 @@ test('holdColorHitRate: 点滅<青<緑<赤<虹の順で信頼度が上がる', (
   }
 });
 
-test('holdColorHitRate: 赤はP_RUSH/P_RUSH_BIGとHOLD_COLOR_WEIGHTSから計算した通りの約46%', () => {
-  // P_RUSH=1/95.3, P_RUSH_BIG=0.03 での手計算値(検証用に別途算出済み)
-  assertClose(holdColorHitRate('red'), 0.45898, 0.0001);
+test('holdColorHitRate: 指定された目標信頼度(無色1%/点滅7%/青33%/緑55%/赤95%)通りに算出される', () => {
+  assertClose(holdColorHitRate('none'), 0.01, 0.0001);
+  assertClose(holdColorHitRate('flash'), 0.07, 0.0001);
+  assertClose(holdColorHitRate('blue'), 0.33, 0.0001);
+  assertClose(holdColorHitRate('green'), 0.55, 0.0001);
+  assertClose(holdColorHitRate('red'), 0.95, 0.0001);
 });
 
 const {
