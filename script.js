@@ -14,13 +14,15 @@ const game = {
   revealedChain: 0,
   stats: { totalPlays: 0, totalProfit: 0, maxChain: 0, totalBalls: 0 },
   pendingTimeoutId: null,
+  paused: false,
 };
 
 let rateSelectEl, modeSelectEl, speedSelectEl, startBtnEl,
     overlayEl, overlayBoxEl, startControlsEl,
     totalPlaysValueEl, totalProfitValueEl, maxChainValueEl, totalBallsValueEl,
     holdsRowEl, holdIconEls, rushStatusRowEl,
-    stRemainingValueEl, chainCountValueEl, rushBallsValueEl;
+    stRemainingValueEl, chainCountValueEl, rushBallsValueEl,
+    pauseRowEl, pauseBtnEl, rushSpeedBtnsEl, holdLegendBodyEl;
 
 function cacheDomRefs() {
   rateSelectEl = document.getElementById('rate-select');
@@ -40,6 +42,19 @@ function cacheDomRefs() {
   stRemainingValueEl = document.getElementById('st-remaining-value');
   chainCountValueEl = document.getElementById('chain-count-value');
   rushBallsValueEl = document.getElementById('rush-balls-value');
+  pauseRowEl = document.getElementById('pause-row');
+  pauseBtnEl = document.getElementById('pause-btn');
+  rushSpeedBtnsEl = document.getElementById('rush-speed-btns');
+  holdLegendBodyEl = document.getElementById('hold-legend-body');
+}
+
+const HOLD_COLOR_LABELS = { none: '無色', flash: '点滅', blue: '青', green: '緑', red: '赤', rainbow: '虹' };
+
+function formatHoldColorRate(color) {
+  const rate = holdColorHitRate(color);
+  if (rate <= 0) return 'ほぼ期待できない';
+  if (rate >= 1) return '当選濃厚(100%)';
+  return `約${Math.round(rate * 100)}%`;
 }
 
 function populateSelects() {
@@ -52,6 +67,16 @@ function populateSelects() {
   speedSelectEl.innerHTML = RUSH_SPEED_OPTIONS.map(
     (s) => `<option value="${s.id}" ${s.id === DEFAULT_RUSH_SPEED ? 'selected' : ''}>${s.label}</option>`
   ).join('');
+  rushSpeedBtnsEl.innerHTML = RUSH_SPEED_OPTIONS.map(
+    (s) => `<button type="button" class="speed-btn" data-speed="${s.id}">${s.label.split('（')[0]}</button>`
+  ).join('');
+  holdLegendBodyEl.innerHTML = HOLD_COLORS.map((color) => `
+    <div class="hold-legend-row">
+      <span class="hold-icon hold-${color}"></span>
+      <span class="hold-legend-label">${HOLD_COLOR_LABELS[color]}</span>
+      <span class="hold-legend-value">${formatHoldColorRate(color)}</span>
+    </div>
+  `).join('');
 }
 
 function bindEvents() {
@@ -59,6 +84,31 @@ function bindEvents() {
   modeSelectEl.addEventListener('change', () => { game.mode = modeSelectEl.value; });
   speedSelectEl.addEventListener('change', () => { game.speed = speedSelectEl.value; });
   startBtnEl.addEventListener('click', startInvestmentFlow);
+  rushSpeedBtnsEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('.speed-btn');
+    if (!btn) return;
+    game.speed = btn.dataset.speed;
+    speedSelectEl.value = game.speed;
+    renderRushSpeedButtons();
+  });
+  pauseBtnEl.addEventListener('click', togglePause);
+}
+
+function renderRushSpeedButtons() {
+  Array.from(rushSpeedBtnsEl.querySelectorAll('.speed-btn')).forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.speed === game.speed);
+  });
+}
+
+// RUSH中の自動消化を一時停止/再開する。演出アニメーションの途中では止めず、
+// 次に保留を消化しようとするタイミング(scheduleHoldConsumeの呼び出し)で止まる。
+function togglePause() {
+  game.paused = !game.paused;
+  pauseBtnEl.textContent = game.paused ? '再開する' : '一時停止';
+  pauseBtnEl.classList.toggle('active', game.paused);
+  if (!game.paused && game.pendingTimeoutId === null) {
+    scheduleHoldConsume();
+  }
 }
 
 function renderStats() {
@@ -94,10 +144,12 @@ function startInvestmentFlow() {
   speedSelectEl.disabled = true;
 
   game.investment = simulateInvestment(game.spinRate);
+  const { toushi, spins, chargeCount, zugarCount } = game.investment;
 
   showOverlay(popupHtml(`
-    <div class="result-main charge">投資額 ${game.investment.toushi.toLocaleString()}円</div>
-    <div class="result-sub">（${game.investment.spins.toLocaleString()}回転）</div>
+    <div class="result-main charge">投資額 ${toushi.toLocaleString()}円</div>
+    <div class="result-sub">（${spins.toLocaleString()}回転）</div>
+    <div class="result-detail">道中の内訳：チャージ ${chargeCount}回 ／ 図柄揃い ${zugarCount}回</div>
   `));
 
   game.pendingTimeoutId = setTimeout(showRouteTelop, 1800);
@@ -129,8 +181,13 @@ function enterRush() {
   game.rushBalls = 0;
   game.revealedStRemaining = game.stCountConst;
   game.revealedChain = 0;
+  game.paused = false;
   holdsRowEl.hidden = false;
   rushStatusRowEl.hidden = false;
+  pauseRowEl.hidden = false;
+  pauseBtnEl.textContent = '一時停止';
+  pauseBtnEl.classList.remove('active');
+  renderRushSpeedButtons();
   renderRushStatus();
   fillHoldQueue();
   scheduleHoldConsume();
@@ -167,6 +224,10 @@ function renderRushStatus() {
 }
 
 function scheduleHoldConsume() {
+  if (game.paused) {
+    game.pendingTimeoutId = null;
+    return;
+  }
   game.pendingTimeoutId = setTimeout(consumeNextHold, rushSpeedIntervalMs(game.speed));
 }
 
@@ -260,6 +321,7 @@ function finishRush() {
 
   holdsRowEl.hidden = true;
   rushStatusRowEl.hidden = true;
+  pauseRowEl.hidden = true;
 
   showOverlay(popupHtml(`
     <div class="rush-result-title">RUSH終了</div>

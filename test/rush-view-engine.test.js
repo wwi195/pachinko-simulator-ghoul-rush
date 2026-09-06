@@ -28,21 +28,21 @@ test('ballsToYen: 280球は1120円', () => {
   assert.equal(ballsToYen(280), 1120);
 });
 
-test('simulateInvestment: 1回転目でCHARGE即LT当選なら投資額1000円・1回転・charge経路', () => {
+test('simulateInvestment: 1回転目でCHARGE即LT当選なら投資額1000円・1回転・charge経路、道中チャージ1回', () => {
   // spinNormal(DEFAULT_ENZOKU_CONFIDENCE=40)の3draw: zugar外れ(0.999) / false_enzoku外れ(0.999) / charge成立(0)
   // 続くrollChargeLt()の1draw: LT当選(0)
   const result = withMockRandom([0.999, 0.999, 0, 0], () => simulateInvestment(16));
-  assert.deepEqual(result, { spins: 1, toushi: 1000, path: 'charge' });
+  assert.deepEqual(result, { spins: 1, toushi: 1000, path: 'charge', chargeCount: 1, zugarCount: 0 });
 });
 
-test('simulateInvestment: CHARGE外れ→miss→図柄揃いでLTチャレンジ成功なら3回転・投資額1000円・zugar経路', () => {
+test('simulateInvestment: CHARGE外れ→miss→図柄揃いでLTチャレンジ成功なら3回転・投資額1000円・zugar経路、道中チャージ1回', () => {
   const sequence = [
     0.999, 0.999, 0, 0.5,       // 1回転目: charge成立, rollChargeLt外れ
     0.999, 0.999, 0.999,        // 2回転目: miss
     0, 0,                       // 3回転目: zugar成立, rollZugarLtChallenge成功
   ];
   const result = withMockRandom(sequence, () => simulateInvestment(16));
-  assert.deepEqual(result, { spins: 3, toushi: 1000, path: 'zugar' });
+  assert.deepEqual(result, { spins: 3, toushi: 1000, path: 'zugar', chargeCount: 1, zugarCount: 1 });
 });
 
 const { HOLD_COLORS, HOLD_COLOR_WEIGHTS, rollHoldColor } = require('../rush-view-engine.js');
@@ -76,6 +76,32 @@ test('rollHoldColor: hit_bigはnone/flashの重みが0なのでrng=0でもblue�
 
 test('rollHoldColor: hit_smallでrng=0.999はrainbow', () => {
   assert.equal(rollHoldColor('hit_small', () => 0.999), 'rainbow');
+});
+
+const { holdColorHitRate } = require('../rush-view-engine.js');
+
+function assertClose(actual, expected, epsilon = 0.001) {
+  assert.ok(
+    Math.abs(actual - expected) < epsilon,
+    `expected ${actual} to be close to ${expected}`
+  );
+}
+
+test('holdColorHitRate: 無色はほぼ0%、虹は100%(当選濃厚)', () => {
+  assertClose(holdColorHitRate('none'), 0);
+  assert.equal(holdColorHitRate('rainbow'), 1);
+});
+
+test('holdColorHitRate: 点滅<青<緑<赤<虹の順で信頼度が上がる', () => {
+  const order = ['none', 'flash', 'blue', 'green', 'red', 'rainbow'].map(holdColorHitRate);
+  for (let i = 1; i < order.length; i++) {
+    assert.ok(order[i] > order[i - 1], `${order[i - 1]} should be < ${order[i]}`);
+  }
+});
+
+test('holdColorHitRate: 赤はP_RUSH/P_RUSH_BIGとHOLD_COLOR_WEIGHTSから計算した通りの約46%', () => {
+  // P_RUSH=1/95.3, P_RUSH_BIG=0.03 での手計算値(検証用に別途算出済み)
+  assertClose(holdColorHitRate('red'), 0.45898, 0.0001);
 });
 
 const {
