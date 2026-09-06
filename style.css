@@ -61,13 +61,14 @@ body {
   border-bottom: 1px solid #1e1e1e;
 }
 
-/* 保留アイコン：立方体を頂点(下)から見た形(見える面は2つだけ)。
+/* 保留アイコン：正方形をタテ半分に割った2面を、右へ50°傾けた形。
    ::beforeが左面、::afterが右面。血管のような筋(--vein-color)を
    ベースの面グラデーション(--face-l/--face-r)に重ねて表現する。 */
 .hold-icon {
   position: relative;
-  width: 24px;
-  height: 28px;
+  width: 17px;
+  height: 17px;
+  transform: rotate(50deg);
   filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.6));
   --face-l: linear-gradient(145deg, #4a4a4a, #2a2a2a);
   --face-r: linear-gradient(215deg, #333, #1a1a1a);
@@ -83,16 +84,12 @@ body {
 }
 .hold-icon::before {
   left: 0;
-  transform-origin: top right;
-  transform: skewY(22deg);
   background:
     repeating-linear-gradient(50deg, transparent 0, transparent 2px, var(--vein-color) 2px 3px, transparent 3px 7px),
     var(--face-l);
 }
 .hold-icon::after {
   right: 0;
-  transform-origin: top left;
-  transform: skewY(-22deg);
   background:
     repeating-linear-gradient(-50deg, transparent 0, transparent 2px, var(--vein-color) 2px 3px, transparent 3px 7px),
     var(--face-r);
@@ -272,7 +269,7 @@ body {
   gap: 8px;
   padding: 3px 0;
 }
-.hold-legend-row .hold-icon { width: 16px; height: 19px; flex-shrink: 0; }
+.hold-legend-row .hold-icon { width: 13px; height: 13px; flex-shrink: 0; margin: 3px; }
 .hold-legend-label { font-size: 12px; color: #ccc; width: 40px; }
 .hold-legend-value { font-size: 12px; color: #999; margin-left: auto; }
 
