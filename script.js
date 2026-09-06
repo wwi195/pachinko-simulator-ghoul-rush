@@ -15,14 +15,18 @@ const game = {
   stats: { totalPlays: 0, totalProfit: 0, maxChain: 0, totalBalls: 0 },
   pendingTimeoutId: null,
   paused: false,
+  history: [],
 };
+
+const HISTORY_MAX_ITEMS = 50;
 
 let rateSelectEl, modeSelectEl, speedSelectEl, startBtnEl,
     overlayEl, overlayBoxEl, startControlsEl,
     totalPlaysValueEl, totalProfitValueEl, maxChainValueEl, totalBallsValueEl,
     holdsRowEl, holdIconEls, rushStatusRowEl,
     stRemainingValueEl, chainCountValueEl, rushBallsValueEl,
-    pauseRowEl, pauseBtnEl, rushSpeedBtnsEl, holdLegendBodyEl;
+    pauseRowEl, pauseBtnEl, rushSpeedBtnsEl, holdLegendBodyEl,
+    introTabBtnEl, introTextEl, historyListEl;
 
 function cacheDomRefs() {
   rateSelectEl = document.getElementById('rate-select');
@@ -46,6 +50,9 @@ function cacheDomRefs() {
   pauseBtnEl = document.getElementById('pause-btn');
   rushSpeedBtnsEl = document.getElementById('rush-speed-btns');
   holdLegendBodyEl = document.getElementById('hold-legend-body');
+  introTabBtnEl = document.getElementById('intro-tab-btn');
+  introTextEl = document.getElementById('intro-text');
+  historyListEl = document.getElementById('history-list');
 }
 
 const HOLD_COLOR_LABELS = { none: '無色', flash: '点滅', blue: '青', green: '緑', red: '赤', rainbow: '虹' };
@@ -92,6 +99,10 @@ function bindEvents() {
     renderRushSpeedButtons();
   });
   pauseBtnEl.addEventListener('click', togglePause);
+  introTabBtnEl.addEventListener('click', () => {
+    introTextEl.hidden = !introTextEl.hidden;
+    introTabBtnEl.textContent = introTextEl.hidden ? '説明を見る' : '説明を閉じる';
+  });
 }
 
 function renderRushSpeedButtons() {
@@ -119,6 +130,32 @@ function renderStats() {
   totalProfitValueEl.classList.add(profit > 0 ? 'green' : profit < 0 ? 'red' : 'gold');
   maxChainValueEl.textContent = `${game.stats.maxChain}連`;
   totalBallsValueEl.textContent = game.stats.totalBalls.toLocaleString();
+}
+
+// ---- 履歴(常時表示) ----
+
+function addHistoryEntry(spins, profit) {
+  game.history.unshift({ spins, profit });
+  if (game.history.length > HISTORY_MAX_ITEMS) game.history.pop();
+  renderHistory();
+}
+
+function renderHistory() {
+  if (game.history.length === 0) {
+    historyListEl.innerHTML = '<div class="history-empty">まだ履歴がありません</div>';
+    return;
+  }
+  historyListEl.innerHTML = game.history.map((entry, i) => {
+    const n = game.history.length - i;
+    const cls = entry.profit > 0 ? 'green' : entry.profit < 0 ? 'red' : 'gold';
+    const sign = entry.profit >= 0 ? '+' : '';
+    return `
+      <div class="history-item">
+        <span class="hi-n">${n}回目：大当たりまで${entry.spins.toLocaleString()}回転</span>
+        <span class="hi-profit ${cls}">${sign}${entry.profit.toLocaleString()}円</span>
+      </div>
+    `;
+  }).join('');
 }
 
 function showOverlay(html) {
@@ -318,6 +355,7 @@ function finishRush() {
   game.stats.maxChain = Math.max(game.stats.maxChain, chain);
   game.stats.totalBalls += balls;
   renderStats();
+  addHistoryEntry(game.investment.spins, profit);
 
   holdsRowEl.hidden = true;
   rushStatusRowEl.hidden = true;
@@ -364,4 +402,5 @@ document.addEventListener('DOMContentLoaded', () => {
   populateSelects();
   bindEvents();
   renderStats();
+  renderHistory();
 });

@@ -155,12 +155,28 @@ body {
   gap: 16px;
 }
 
+.intro-tab-btn {
+  align-self: flex-start;
+  font-size: 12px;
+  color: #f0c040;
+  background: none;
+  border: 1px solid #444;
+  border-radius: 14px;
+  padding: 5px 14px;
+  cursor: pointer;
+}
+.intro-tab-btn:active { opacity: 0.7; }
+
 .intro-text {
   width: 100%;
   font-size: 12px;
   line-height: 1.7;
   color: #999;
   text-align: left;
+  background: #141414;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px 12px;
 }
 
 .select-block {
@@ -387,3 +403,40 @@ select {
   text-shadow: 0 1px 2px rgba(0,0,0,0.4);
 }
 .btn-action:active { opacity: 0.75; transform: scale(0.97); }
+
+/* ========== 履歴パネル(常時表示) ========== */
+#history-panel {
+  background: #0a0a0a;
+  border-top: 1px solid #222;
+  max-height: 160px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+#history-title {
+  font-size: 10px;
+  color: #666;
+  padding: 6px 12px 3px;
+  letter-spacing: 1px;
+  position: sticky;
+  top: 0;
+  background: #0a0a0a;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 5px 12px;
+  border-bottom: 1px solid #181818;
+  color: #999;
+}
+.history-item .hi-profit.green { color: #44cc88; }
+.history-item .hi-profit.red   { color: #cc6666; }
+.history-item .hi-profit.gold  { color: #f0c040; }
+
+.history-empty {
+  font-size: 11px;
+  color: #555;
+  padding: 4px 12px 8px;
+}
