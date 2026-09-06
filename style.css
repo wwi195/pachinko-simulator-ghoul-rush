@@ -61,25 +61,80 @@ body {
   border-bottom: 1px solid #1e1e1e;
 }
 
+/* 保留アイコン：立方体を頂点(下)から見た形(見える面は2つだけ)。
+   ::beforeが左面、::afterが右面。血管のような筋(--vein-color)を
+   ベースの面グラデーション(--face-l/--face-r)に重ねて表現する。 */
 .hold-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #2a2a2a;
-  border: 2px solid #444;
-  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+  width: 24px;
+  height: 28px;
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.6));
+  --face-l: linear-gradient(145deg, #4a4a4a, #2a2a2a);
+  --face-r: linear-gradient(215deg, #333, #1a1a1a);
+  --vein-color: rgba(120, 30, 40, 0.35);
 }
-.hold-icon.hold-none    { background: #3a3a3a; border-color: #555; }
-.hold-icon.hold-flash   { background: #555; border-color: #aaa; animation: holdFlash 0.8s ease infinite; }
-.hold-icon.hold-blue    { background: #2266cc; border-color: #66aaff; box-shadow: 0 0 8px rgba(66,150,255,0.6); }
-.hold-icon.hold-green   { background: #229955; border-color: #66dd99; box-shadow: 0 0 8px rgba(66,220,150,0.6); }
-.hold-icon.hold-red     { background: #cc3333; border-color: #ff7777; box-shadow: 0 0 10px rgba(255,80,80,0.7); }
-.hold-icon.hold-rainbow {
-  background: linear-gradient(90deg, #ff3b3b, #ff9d3b, #ffe93b, #3bff6a, #3bcfff, #6a3bff, #ff3bcf, #ff3b3b);
+.hold-icon::before,
+.hold-icon::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+}
+.hold-icon::before {
+  left: 0;
+  transform-origin: top right;
+  transform: skewY(22deg);
+  background:
+    repeating-linear-gradient(50deg, transparent 0, transparent 2px, var(--vein-color) 2px 3px, transparent 3px 7px),
+    var(--face-l);
+}
+.hold-icon::after {
+  right: 0;
+  transform-origin: top left;
+  transform: skewY(-22deg);
+  background:
+    repeating-linear-gradient(-50deg, transparent 0, transparent 2px, var(--vein-color) 2px 3px, transparent 3px 7px),
+    var(--face-r);
+}
+
+.hold-icon.hold-none {
+  --face-l: linear-gradient(145deg, #f2e6ee 0%, #ddc0d6 60%, #c9a2c0 100%);
+  --face-r: linear-gradient(215deg, #d9bdd3 0%, #b98fb0 60%, #9c7295 100%);
+  --vein-color: rgba(190, 30, 45, 0.5);
+}
+.hold-icon.hold-flash {
+  --face-l: linear-gradient(145deg, #cfc7cf 0%, #a89aa8 60%, #8a7a8a 100%);
+  --face-r: linear-gradient(215deg, #a89aa8 0%, #7d6d7d 60%, #5f505f 100%);
+  --vein-color: rgba(180, 30, 40, 0.3);
+  animation: holdFlash 0.8s ease infinite;
+}
+.hold-icon.hold-blue {
+  --face-l: linear-gradient(145deg, #cfe0f5 0%, #8fb8e6 60%, #5f93d1 100%);
+  --face-r: linear-gradient(215deg, #8fb8e6 0%, #5f93d1 60%, #3d6fb0 100%);
+  --vein-color: rgba(60, 120, 220, 0.4);
+}
+.hold-icon.hold-green {
+  --face-l: linear-gradient(145deg, #cdf0d8 0%, #7fd99f 60%, #4fbb78 100%);
+  --face-r: linear-gradient(215deg, #7fd99f 0%, #4fbb78 60%, #329957 100%);
+  --vein-color: rgba(40, 150, 90, 0.4);
+}
+.hold-icon.hold-red {
+  --face-l: linear-gradient(145deg, #f5c9c9 0%, #e67070 60%, #cc3333 100%);
+  --face-r: linear-gradient(215deg, #e67070 0%, #cc3333 60%, #a01f1f 100%);
+  --vein-color: rgba(255, 80, 80, 0.7);
+}
+.hold-icon.hold-rainbow::before,
+.hold-icon.hold-rainbow::after {
   background-size: 400% 100%;
-  border-color: #fff;
   animation: rush-rainbow 2s linear infinite;
-  box-shadow: 0 0 12px rgba(255,255,255,0.7);
+}
+.hold-icon.hold-rainbow::before {
+  background-image: linear-gradient(90deg, #ff3b3b, #ff9d3b, #ffe93b, #3bff6a, #3bcfff, #6a3bff, #ff3bcf, #ff3b3b);
+}
+.hold-icon.hold-rainbow::after {
+  background-image: linear-gradient(90deg, #ff3bcf, #ff3b3b, #ff9d3b, #ffe93b, #3bff6a, #3bcfff, #6a3bff, #ff3bcf);
+  animation-direction: reverse;
 }
 
 @keyframes holdFlash {
@@ -217,7 +272,7 @@ body {
   gap: 8px;
   padding: 3px 0;
 }
-.hold-legend-row .hold-icon { width: 18px; height: 18px; flex-shrink: 0; }
+.hold-legend-row .hold-icon { width: 16px; height: 19px; flex-shrink: 0; }
 .hold-legend-label { font-size: 12px; color: #ccc; width: 40px; }
 .hold-legend-value { font-size: 12px; color: #999; margin-left: auto; }
 
