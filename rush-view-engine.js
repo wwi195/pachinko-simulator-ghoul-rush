@@ -120,8 +120,8 @@ const MAX_HOLDS = 4;
 
 const RUSH_SPEED_OPTIONS = [
   { id: 'normal',  label: '通常（実機と同様）', intervalMs: 1400 },
-  { id: 'fast',    label: '速い',             intervalMs: 700 },
-  { id: 'fastest', label: '最速',             intervalMs: 350 },
+  { id: 'fast',    label: '速い',             intervalMs: 350 },
+  { id: 'fastest', label: '最速',             intervalMs: 175 },
 ];
 const DEFAULT_RUSH_SPEED = 'normal';
 
