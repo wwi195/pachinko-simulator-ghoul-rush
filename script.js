@@ -256,24 +256,52 @@ function enterRush() {
   endRushBtnEl.disabled = false;
   renderRushSpeedButtons();
   renderRushStatus();
-  fillHoldQueue();
-  scheduleHoldConsume();
+  renderHolds();
+  revealHoldsOneByOne();
 }
 
-function fillHoldQueue() {
-  while (!game.rushGenerationDone && game.holds.length < MAX_HOLDS) {
-    const { rushState, outcome } = applyRushSpin(game.rush);
-    game.rush = rushState;
-    let color = rollHoldColor(outcome);
-    if (game.mode === 'rize' && (outcome === 'hit_small' || outcome === 'hit_big')) {
-      color = 'rainbow';
-    }
-    game.holds.push({ outcome, color });
-    if (outcome === 'st_end') {
-      game.rushGenerationDone = true;
-    }
+const HOLD_REVEAL_STAGGER_MS = 220;
+
+// RUSH開始時、保留を1個ずつ「ポン」と出現させながら最大4個まで貯めていく。
+// スキップ中(終了するボタン押下後)は演出を待たず即座に埋める。
+function revealHoldsOneByOne() {
+  const added = generateOneHold();
+  if (!added) {
+    scheduleHoldConsume();
+    return;
   }
   renderHolds();
+  popHoldIcon(game.holds.length - 1);
+  const delay = game.skipping ? 0 : HOLD_REVEAL_STAGGER_MS;
+  game.pendingTimeoutId = setTimeout(revealHoldsOneByOne, delay);
+}
+
+// 保留を1個だけ生成してgame.holdsに追加する。生成できた場合はtrueを返す
+// (ST消化が終わっているか、既に保留が上限なら何もせずfalseを返す)。
+function generateOneHold() {
+  if (game.rushGenerationDone || game.holds.length >= MAX_HOLDS) return false;
+  const { rushState, outcome } = applyRushSpin(game.rush);
+  game.rush = rushState;
+  let color = rollHoldColor(outcome);
+  if (game.mode === 'rize' && (outcome === 'hit_small' || outcome === 'hit_big')) {
+    color = 'rainbow';
+  }
+  game.holds.push({ outcome, color });
+  if (outcome === 'st_end') {
+    game.rushGenerationDone = true;
+  }
+  return true;
+}
+
+// 保留消化で空いた枠を、上限(MAX_HOLDS)まで補充する。新しく増えた枠には
+// 登場アニメーションを付ける。
+function fillHoldQueue() {
+  const startLength = game.holds.length;
+  while (generateOneHold()) {}
+  renderHolds();
+  for (let i = startLength; i < game.holds.length; i++) {
+    popHoldIcon(i);
+  }
 }
 
 function renderHolds() {
@@ -282,6 +310,16 @@ function renderHolds() {
     el.className = 'hold-icon';
     if (hold) el.classList.add(`hold-${hold.color}`);
   });
+}
+
+// 保留アイコンの登場アニメーションを(再)発火させる。既に再生中でも
+// リフローを挟んでクラスを付け直すことで、アニメーションを最初からやり直す。
+function popHoldIcon(index) {
+  const el = holdIconEls[index];
+  if (!el) return;
+  el.classList.remove('hold-pop');
+  void el.offsetWidth;
+  el.classList.add('hold-pop');
 }
 
 function renderRushStatus() {

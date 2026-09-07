@@ -134,6 +134,16 @@ body {
   animation-direction: reverse;
 }
 
+/* 保留の登場アニメーション：貯まっていく様子を1個ずつ「ポン」と見せる */
+.hold-icon.hold-pop {
+  animation: holdAppear 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes holdAppear {
+  0%   { transform: rotate(50deg) scale(0.2); opacity: 0; }
+  60%  { transform: rotate(50deg) scale(1.15); opacity: 1; }
+  100% { transform: rotate(50deg) scale(1); opacity: 1; }
+}
+
 @keyframes holdFlash {
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.4; }
