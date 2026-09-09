@@ -24,7 +24,7 @@ const HISTORY_MAX_ITEMS = 50;
 let rateSelectEl, modeSelectEl, speedSelectEl, startBtnEl,
     overlayEl, overlayBoxEl, startControlsEl,
     totalPlaysValueEl, totalProfitValueEl, maxChainValueEl, totalBallsValueEl,
-    holdsRowEl, holdIconEls, rushStatusRowEl,
+    holdsRowEl, holdIconEls, currentHoldIconEl, rushStatusRowEl,
     stRemainingValueEl, chainCountValueEl, rushBallsValueEl,
     pauseRowEl, pauseBtnEl, endRushBtnEl, rushSpeedBtnsEl, holdLegendBodyEl,
     introTabBtnEl, introTextEl, historyListEl;
@@ -42,7 +42,8 @@ function cacheDomRefs() {
   maxChainValueEl = document.getElementById('max-chain-value');
   totalBallsValueEl = document.getElementById('total-balls-value');
   holdsRowEl = document.getElementById('holds-row');
-  holdIconEls = Array.from(document.querySelectorAll('.hold-icon'));
+  holdIconEls = Array.from(document.querySelectorAll('.hold-stock-row .hold-icon'));
+  currentHoldIconEl = document.getElementById('current-hold-icon');
   rushStatusRowEl = document.getElementById('rush-status-row');
   stRemainingValueEl = document.getElementById('st-remaining-value');
   chainCountValueEl = document.getElementById('chain-count-value');
@@ -257,6 +258,7 @@ function enterRush() {
   renderRushSpeedButtons();
   renderRushStatus();
   renderHolds();
+  renderCurrentHold(null);
   revealHoldsOneByOne();
 }
 
@@ -322,6 +324,17 @@ function popHoldIcon(index) {
   el.classList.add('hold-pop');
 }
 
+// 現在処理中の保留(保留0)を、他より大きく単独で表示する。
+// 外れ(miss)なら一瞬見せてからフッと消え(hold-flash-out)、当たりなら
+// 表示され続ける(hold-pop、告知演出の裏で光ったままになる)。
+function renderCurrentHold(hold) {
+  currentHoldIconEl.className = 'hold-icon';
+  if (!hold) return;
+  currentHoldIconEl.classList.add(`hold-${hold.color}`);
+  void currentHoldIconEl.offsetWidth;
+  currentHoldIconEl.classList.add(hold.outcome === 'miss' ? 'hold-flash-out' : 'hold-pop');
+}
+
 function renderRushStatus() {
   stRemainingValueEl.textContent = game.revealedStRemaining;
   chainCountValueEl.textContent = game.revealedChain;
@@ -340,6 +353,7 @@ function scheduleHoldConsume() {
 function consumeNextHold() {
   const hold = game.holds.shift();
   renderHolds();
+  renderCurrentHold(hold);
 
   if (hold.outcome === 'st_end') {
     finishRush();
