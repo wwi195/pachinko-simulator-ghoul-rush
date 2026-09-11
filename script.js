@@ -324,6 +324,20 @@ function popHoldIcon(index) {
   el.classList.add('hold-pop');
 }
 
+// 保留ストック(下段)が1個消化されて右隣が詰めた枠(index 0〜2)に、
+// 左へスライドするアニメーションを(再)発火させる。新規生成された枠
+// (popHoldIconで別途処理済み)には掛けない。
+function slideHoldIconsLeft() {
+  for (let i = 0; i < MAX_HOLDS - 1; i++) {
+    if (!game.holds[i]) continue;
+    const el = holdIconEls[i];
+    if (!el) continue;
+    el.classList.remove('hold-slide');
+    void el.offsetWidth;
+    el.classList.add('hold-slide');
+  }
+}
+
 // 現在処理中の保留(保留0)を、他より大きく単独で表示する。
 // 外れ(miss)なら一瞬見せてからフッと消え(hold-flash-out)、当たりなら
 // 表示され続ける(hold-pop、告知演出の裏で光ったままになる)。
@@ -350,11 +364,23 @@ function scheduleHoldConsume() {
   game.pendingTimeoutId = setTimeout(consumeNextHold, delay);
 }
 
+// 保留0の登場アニメーション(0.4s)が終わるまで、結果の確定(はずれ確定／
+// 当たり演出表示)を待たせる。これにより「保留0が出現しきる前に大当たり
+// 演出が先に出てしまう」事故を防ぎ、「保留消化開始→結果確定」の間に
+// 見てわかる判定タイムを作る。スキップ中は待たない。
+const HOLD_ARRIVAL_MS = 420;
+
 function consumeNextHold() {
   const hold = game.holds.shift();
   renderHolds();
+  slideHoldIconsLeft();
   renderCurrentHold(hold);
 
+  const revealDelay = game.skipping ? 0 : HOLD_ARRIVAL_MS;
+  game.pendingTimeoutId = setTimeout(() => resolveHold(hold), revealDelay);
+}
+
+function resolveHold(hold) {
   if (hold.outcome === 'st_end') {
     finishRush();
     return;

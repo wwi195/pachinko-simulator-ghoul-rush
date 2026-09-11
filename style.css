@@ -167,6 +167,27 @@ body {
   100% { transform: rotate(50deg) scale(1); opacity: 1; }
 }
 
+/* 保留ストック(下段)が1つ消化されるたびに、右隣の保留が1枠分左へ詰める
+   動き。移動距離27px = アイコン幅17px + gap10px。移動元から光の尾を
+   引きながら詰まっていくように見せる(保留0への移動と同じ金色のトレイル)。 */
+.hold-icon.hold-slide {
+  animation: holdSlideLeft 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes holdSlideLeft {
+  0% {
+    transform: translateX(27px) rotate(50deg) scale(1);
+    opacity: 0.6;
+    filter:
+      drop-shadow(6px 0 3px rgba(240, 192, 64, 0.4))
+      drop-shadow(12px 0 5px rgba(240, 192, 64, 0.2));
+  }
+  100% {
+    transform: translateX(0) rotate(50deg) scale(1);
+    opacity: 1;
+    filter: drop-shadow(0 0 0 rgba(240, 192, 64, 0));
+  }
+}
+
 /* 保留の消滅アニメーション：現在処理中の保留(保留0)が外れだった場合、
    一瞬見せてからフッと消える。forwardsで消えた状態を維持する。 */
 .hold-icon.hold-flash-out {
