@@ -115,15 +115,26 @@ function renderRushSpeedButtons() {
   });
 }
 
-// RUSH中の自動消化を一時停止/再開する。演出アニメーションの途中では止めず、
-// 次に保留を消化しようとするタイミング(scheduleHoldConsumeの呼び出し)で止まる。
+// RUSH中の一時停止/再開。一時停止は「新しい保留が増えるのを止める」だけで、
+// 既にある保留の消化は止めずそのまま進み続ける(fillHoldQueue側でガードする)。
+// そのため、一時停止中に保留を使い切ると自然に消化ループも止まり、
+// 再開したタイミングで補充されて再び動き出す。
 function togglePause() {
   game.paused = !game.paused;
   pauseBtnEl.textContent = game.paused ? '再開する' : '一時停止';
   pauseBtnEl.classList.toggle('active', game.paused);
   if (!game.paused && game.pendingTimeoutId === null) {
-    scheduleHoldConsume();
+    resumeHoldFlow();
   }
+}
+
+// 一時停止中に保留の生成が止まっていた場合、再開時に補充してから
+// 消化ループを動かす。
+function resumeHoldFlow() {
+  if (!game.rushGenerationDone && game.holds.length < MAX_HOLDS) {
+    fillHoldQueue();
+  }
+  scheduleHoldConsume();
 }
 
 // 「終了する」：以後の保留消化を演出待ちなしで即座に進め、RUSH終了(st_end)まで自動で消化しきる。
@@ -136,7 +147,7 @@ function endRushNow() {
   endRushBtnEl.disabled = true;
   showOverlay(popupHtml('<div class="result-main charge">スキップ中…</div>'));
   if (game.pendingTimeoutId === null) {
-    scheduleHoldConsume();
+    resumeHoldFlow();
   }
 }
 
@@ -296,8 +307,9 @@ function generateOneHold() {
 }
 
 // 保留消化で空いた枠を、上限(MAX_HOLDS)まで補充する。新しく増えた枠には
-// 登場アニメーションを付ける。
+// 登場アニメーションを付ける。一時停止中は補充しない(=新しい保留は増えない)。
 function fillHoldQueue() {
+  if (game.paused) return;
   const startLength = game.holds.length;
   while (generateOneHold()) {}
   renderHolds();
@@ -355,8 +367,10 @@ function renderRushStatus() {
   rushBallsValueEl.textContent = game.rushBalls.toLocaleString();
 }
 
+// 一時停止中でも、既に保留にある分の消化は止めない(止まるのは補充だけ)。
+// 保留を使い切ったときだけ、消化するものがないため待機状態にする。
 function scheduleHoldConsume() {
-  if (game.paused) {
+  if (game.holds.length === 0) {
     game.pendingTimeoutId = null;
     return;
   }
