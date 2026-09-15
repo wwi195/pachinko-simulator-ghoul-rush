@@ -135,7 +135,19 @@ function togglePause() {
 // 見て消化間隔を決めるため、必ずfillHoldQueue()より先に呼ぶ
 // (fillHoldQueue()は1個目を同期的に追加してしまうため、後から呼ぶと
 // 在庫0の判定ができなくなり、5倍スロー化が効かなくなる)。
+// 在庫(保留1〜4)が空 = 保留0も空の状態での再開は、保留1〜4が
+// 貯まるのを待ってから保留0を埋めるのではなく、真っ先に1個生成して
+// そのまま保留0へ投入し、変動をすぐ開始する。保留1〜4の補充は
+// その後(fillHoldQueue)で並行して貯めていく。在庫が残っている
+// 場合は、通常通り消化スケジュールと補充を行う。
 function resumeHoldFlow() {
+  if (game.holds.length === 0 && !game.rushGenerationDone) {
+    if (generateOneHold()) {
+      consumeNextHold();
+    }
+    fillHoldQueue();
+    return;
+  }
   scheduleHoldConsume();
   if (!game.rushGenerationDone && game.holds.length < MAX_HOLDS) {
     fillHoldQueue();
@@ -346,10 +358,22 @@ function fillHoldQueueStep(remaining) {
     fillHoldQueueActive = false;
     return;
   }
-  renderHolds();
+  // renderHolds()(全枠リセット)ではなく、新しく増えた枠だけを更新する。
+  // 全枠リセットだと、直前にcatchUpStockDisplay()が付けたhold-slideの
+  // クラスをペイント前に消してしまい、スライドアニメーションが
+  // 見えないまま終わってしまう不具合があった。
+  renderHoldAt(game.holds.length - 1);
   popHoldIcon(game.holds.length - 1);
   const delay = game.skipping ? 0 : HOLD_REVEAL_STAGGER_MS;
   setTimeout(() => fillHoldQueueStep(remaining - 1), delay);
+}
+
+function renderHoldAt(index) {
+  const el = holdIconEls[index];
+  if (!el) return;
+  const hold = game.holds[index];
+  el.className = 'hold-icon';
+  if (hold) el.classList.add(`hold-${hold.color}`);
 }
 
 function renderHolds() {
