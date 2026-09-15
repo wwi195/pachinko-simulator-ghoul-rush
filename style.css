@@ -123,6 +123,14 @@ body {
   50%  { transform: scale(1.25); }
   100% { transform: scale(1); }
 }
+/* 当選確定後、当選告知(画像)へ切り替わる直前に3桁を一瞬で消す */
+.lcd-digit.lcd-vanish {
+  animation: lcdDigitVanish 0.2s ease-in forwards;
+}
+@keyframes lcdDigitVanish {
+  0%   { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.4); opacity: 0; }
+}
 
 /* 現在処理中の保留(保留0)：他より大きく、単独で中央に表示する。
    外れの場合はhold-flash-outで一瞬見せてから消える。 */

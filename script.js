@@ -468,10 +468,12 @@ function resolveHold(hold) {
     game.rushBalls += balls;
     game.revealedChain += 1;
     game.revealedStRemaining = game.stCountConst;
-    showHitAnnouncement(isBig, balls, game.revealedChain, () => {
-      hideOverlay();
-      scheduleHoldConsume();
-      fillHoldQueue();
+    vanishLcdDigits(() => {
+      showHitAnnouncement(isBig, balls, game.revealedChain, () => {
+        hideOverlay();
+        scheduleHoldConsume();
+        fillHoldQueue();
+      });
     });
   });
 }
@@ -480,7 +482,8 @@ function resolveHold(hold) {
 // 保留消化のたびに3桁が回転する。当たりの場合：まず少し回してから
 // 両端(1・3桁目)を先に止め(はさみテンパイ)、挟まれた真ん中の桁が
 // 回り続けたまま約5秒の緊張を作ってから3桁を揃え、0.5秒待って
-// 当選告知(onDone)へ進む。外れの場合：短い回転の
+// onDoneへ進む(onDone側で3桁を一瞬消してから当選告知の画像に
+// 引き継ぐ、vanishLcdDigits参照)。外れの場合：短い回転の
 // 後、揃わずに止まってすぐonDoneへ進む(数字自体は演出用の飾りで、
 // 当落は既にhold.outcomeで決まっている)。スキップ中は回転を見せず、
 // 結果の数字だけ即座に表示してonDoneへ進む。
@@ -531,6 +534,27 @@ function resetLcdScreen() {
   setLcdDigit(0, null);
   setLcdDigit(1, null);
   setLcdDigit(2, null);
+}
+
+// 揃った3桁を一瞬で消してから当選告知(画像)へ引き継ぐ。スキップ中は
+// アニメーションを待たず即座に消す。
+const LCD_VANISH_MS = 200;
+
+function vanishLcdDigits(onDone) {
+  lcdScreenEl.classList.remove('lcd-aligned');
+  lcdDigitEls.forEach((el) => {
+    el.classList.remove('lcd-vanish');
+    void el.offsetWidth;
+    el.classList.add('lcd-vanish');
+  });
+  const delay = game.skipping ? 0 : LCD_VANISH_MS;
+  game.pendingTimeoutId = setTimeout(() => {
+    setLcdDigit(0, null);
+    setLcdDigit(1, null);
+    setLcdDigit(2, null);
+    lcdDigitEls.forEach((el) => el.classList.remove('lcd-vanish'));
+    onDone();
+  }, delay);
 }
 
 function runLcdSequence(isHit, onDone) {
