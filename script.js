@@ -507,7 +507,7 @@ function resolveHold(hold) {
 // ---- 液晶(3桁)演出 ----
 // 保留消化のたびに3桁が回転する。当たりの場合：まず少し回してから
 // 両端(1・3桁目)を先に止め(はさみテンパイ)、挟まれた真ん中の桁が
-// 回り続けたまま約5秒の緊張を作ってから3桁を揃え、0.5秒待って
+// 回り続けたまま約3秒の緊張を作ってから3桁を揃え、0.5秒待って
 // onDoneへ進む(onDone側で3桁を一瞬消してから当選告知の画像に
 // 引き継ぐ、vanishLcdDigits参照)。外れの場合：短い回転の
 // 後、揃わずに止まってすぐonDoneへ進む(数字自体は演出用の飾りで、
@@ -515,7 +515,7 @@ function resolveHold(hold) {
 // 結果の数字だけ即座に表示してonDoneへ進む。
 const LCD_SPIN_TICK_MS = 70;
 const LCD_REACH_START_DELAY_MS = 280;
-const LCD_REACH_HOLD_MS = 5000;
+const LCD_REACH_HOLD_MS = 3000;
 const LCD_ALIGN_TO_NEXT_MS = 500;
 const LCD_MISS_SPIN_MS = 450;
 
