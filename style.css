@@ -307,9 +307,10 @@ body {
    (低opacity・小scale)にしてしまうと、既に登場済みのアイコンが
    このアニメーション開始と同時に一旦その状態へ巻き戻り、27%あたりで
    フルスケールへ戻る…という「消えかけて即再出現する」ように見える
-   事故になる(以前の実装のバグ)。420ms(HOLD_ARRIVAL_MS)より短く保ち、
-   最速設定(次の保留到着まで最短595ms)でも自然に消え切ってから
-   次が来るようにしている。 */
+   事故になる(以前の実装のバグ)。次の保留が来るまでの間隔は、この
+   0.55秒を下回らないようscript.js側(CURRENT_HOLD_FLASH_OUT_MS)で
+   保証しているため、どのST消化速度でも自然に消え切ってから次が
+   来る。 */
 #current-hold-icon.hold-flash-out {
   animation: currentHoldFlashOut 0.55s ease-out forwards;
 }
