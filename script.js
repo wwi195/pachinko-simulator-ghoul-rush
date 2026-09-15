@@ -442,9 +442,10 @@ function resolveHold(hold) {
 }
 
 // ---- 液晶(3桁)演出 ----
-// 保留消化のたびに3桁が回転する。当たりの場合：まず少し回してから2桁を
-// 先に止め(リーチ開始)、残り1桁が回り続けたまま約5秒の緊張を作ってから
-// 3桁を揃え、0.5秒待って当選告知(onDone)へ進む。外れの場合：短い回転の
+// 保留消化のたびに3桁が回転する。当たりの場合：まず少し回してから
+// 両端(1・3桁目)を先に止め(はさみテンパイ)、挟まれた真ん中の桁が
+// 回り続けたまま約5秒の緊張を作ってから3桁を揃え、0.5秒待って
+// 当選告知(onDone)へ進む。外れの場合：短い回転の
 // 後、揃わずに止まってすぐonDoneへ進む(数字自体は演出用の飾りで、
 // 当落は既にhold.outcomeで決まっている)。スキップ中は回転を見せず、
 // 結果の数字だけ即座に表示してonDoneへ進む。
@@ -452,7 +453,7 @@ const LCD_SPIN_TICK_MS = 70;
 const LCD_REACH_START_DELAY_MS = 280;
 const LCD_REACH_HOLD_MS = 5000;
 const LCD_ALIGN_TO_NEXT_MS = 500;
-const LCD_MISS_SPIN_MS = 900;
+const LCD_MISS_SPIN_MS = 450;
 
 let lcdSpinIntervalId = null;
 
@@ -528,12 +529,12 @@ function runLcdSequence(isHit, onDone) {
   game.pendingTimeoutId = setTimeout(() => {
     const d = randomDigit();
     setLcdDigit(0, d);
-    setLcdDigit(1, d);
+    setLcdDigit(2, d);
     lcdScreenEl.classList.add('lcd-reach');
-    startLcdSpin([2]);
+    startLcdSpin([1]);
     game.pendingTimeoutId = setTimeout(() => {
       stopLcdSpin();
-      setLcdDigit(2, d);
+      setLcdDigit(1, d);
       lcdScreenEl.classList.remove('lcd-reach');
       lcdScreenEl.classList.add('lcd-aligned');
       game.pendingTimeoutId = setTimeout(onDone, LCD_ALIGN_TO_NEXT_MS);
