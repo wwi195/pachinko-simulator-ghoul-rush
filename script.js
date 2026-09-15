@@ -24,7 +24,7 @@ const HISTORY_MAX_ITEMS = 50;
 let rateSelectEl, modeSelectEl, speedSelectEl, startBtnEl,
     overlayEl, overlayBoxEl, startControlsEl,
     totalPlaysValueEl, totalProfitValueEl, maxChainValueEl, totalBallsValueEl,
-    holdsRowEl, holdIconEls, currentHoldIconEl, rushStatusRowEl,
+    holdsRowEl, holdIconEls, currentHoldIconEl, lcdScreenEl, lcdDigitEls, rushStatusRowEl,
     stRemainingValueEl, chainCountValueEl, rushBallsValueEl,
     pauseRowEl, pauseBtnEl, endRushBtnEl, rushSpeedBtnsEl, holdLegendBodyEl,
     introTabBtnEl, introTextEl, historyListEl;
@@ -44,6 +44,8 @@ function cacheDomRefs() {
   holdsRowEl = document.getElementById('holds-row');
   holdIconEls = Array.from(document.querySelectorAll('.hold-stock-row .hold-icon'));
   currentHoldIconEl = document.getElementById('current-hold-icon');
+  lcdScreenEl = document.getElementById('lcd-screen');
+  lcdDigitEls = Array.from(document.querySelectorAll('.lcd-digit'));
   rushStatusRowEl = document.getElementById('rush-status-row');
   stRemainingValueEl = document.getElementById('st-remaining-value');
   chainCountValueEl = document.getElementById('chain-count-value');
@@ -129,12 +131,15 @@ function togglePause() {
 }
 
 // 一時停止中に保留の生成が止まっていた場合、再開時に補充してから
-// 消化ループを動かす。
+// 消化ループを動かす。scheduleHoldConsume()は「在庫が空かどうか」を
+// 見て消化間隔を決めるため、必ずfillHoldQueue()より先に呼ぶ
+// (fillHoldQueue()は1個目を同期的に追加してしまうため、後から呼ぶと
+// 在庫0の判定ができなくなり、5倍スロー化が効かなくなる)。
 function resumeHoldFlow() {
+  scheduleHoldConsume();
   if (!game.rushGenerationDone && game.holds.length < MAX_HOLDS) {
     fillHoldQueue();
   }
-  scheduleHoldConsume();
 }
 
 // 「終了する」：以後の保留消化を演出待ちなしで即座に進め、RUSH終了(st_end)まで自動で消化しきる。
@@ -270,6 +275,7 @@ function enterRush() {
   renderRushStatus();
   renderHolds();
   renderCurrentHold(null);
+  resetLcdScreen();
   revealHoldsOneByOne();
 }
 
@@ -306,16 +312,18 @@ function generateOneHold() {
   return true;
 }
 
-// 保留消化で空いた枠を、上限(MAX_HOLDS)まで補充する。新しく増えた枠には
-// 登場アニメーションを付ける。一時停止中は補充しない(=新しい保留は増えない)。
+// 保留消化で空いた枠を、上限(MAX_HOLDS)まで補充する。1個ずつ「ポン」と
+// 出現させながら順番に埋めていく(一気に全部出さない)。一時停止からの
+// 再開直後など、在庫がまとめて空だった場合でも1個ずつ貯まる様子が
+// 見えるようにするための挙動。一時停止中は補充しない(=新しい保留は増えない)。
 function fillHoldQueue() {
   if (game.paused) return;
-  const startLength = game.holds.length;
-  while (generateOneHold()) {}
+  if (game.rushGenerationDone || game.holds.length >= MAX_HOLDS) return;
+  if (!generateOneHold()) return;
   renderHolds();
-  for (let i = startLength; i < game.holds.length; i++) {
-    popHoldIcon(i);
-  }
+  popHoldIcon(game.holds.length - 1);
+  const delay = game.skipping ? 0 : HOLD_REVEAL_STAGGER_MS;
+  setTimeout(fillHoldQueue, delay);
 }
 
 function renderHolds() {
@@ -368,13 +376,20 @@ function renderRushStatus() {
 }
 
 // 一時停止中でも、既に保留にある分の消化は止めない(止まるのは補充だけ)。
-// 保留を使い切ったときだけ、消化するものがないため待機状態にする。
+// 保留を使い切ったとき：一時停止中、またはST消化(保留生成)が完全に
+// 終わっている場合は、消化するものがないため待機状態にする。
+// それ以外(再開直後などで保留0のみ・在庫が空)の場合は、消化間隔を
+// 通常の5倍に伸ばし、fillHoldQueueが保留1〜4を1個ずつ貯める時間を作る。
+const EMPTY_STOCK_SLOWDOWN = 5;
+
 function scheduleHoldConsume() {
-  if (game.holds.length === 0) {
+  if (game.holds.length === 0 && (game.paused || game.rushGenerationDone)) {
     game.pendingTimeoutId = null;
     return;
   }
-  const delay = game.skipping ? 0 : rushSpeedIntervalMs(game.speed);
+  const baseInterval = rushSpeedIntervalMs(game.speed);
+  const interval = game.holds.length === 0 ? baseInterval * EMPTY_STOCK_SLOWDOWN : baseInterval;
+  const delay = game.skipping ? 0 : interval;
   game.pendingTimeoutId = setTimeout(consumeNextHold, delay);
 }
 
@@ -396,28 +411,134 @@ function consumeNextHold() {
 
 function resolveHold(hold) {
   if (hold.outcome === 'st_end') {
+    resetLcdScreen();
     finishRush();
     return;
   }
 
-  if (hold.outcome === 'miss') {
-    game.revealedStRemaining -= 1;
-    renderRushStatus();
-    fillHoldQueue();
-    scheduleHoldConsume();
+  const isHit = hold.outcome === 'hit_small' || hold.outcome === 'hit_big';
+  runLcdSequence(isHit, () => {
+    if (!isHit) {
+      game.revealedStRemaining -= 1;
+      renderRushStatus();
+      // scheduleHoldConsume()を先に呼ぶ理由はresumeHoldFlow()と同じ
+      // (fillHoldQueue()は在庫0判定を壊してしまうため)。
+      scheduleHoldConsume();
+      fillHoldQueue();
+      return;
+    }
+
+    const isBig = hold.outcome === 'hit_big';
+    const balls = rushHitBalls(hold.outcome);
+    game.rushBalls += balls;
+    game.revealedChain += 1;
+    game.revealedStRemaining = game.stCountConst;
+    showHitAnnouncement(isBig, balls, game.revealedChain, () => {
+      hideOverlay();
+      scheduleHoldConsume();
+      fillHoldQueue();
+    });
+  });
+}
+
+// ---- 液晶(3桁)演出 ----
+// 保留消化のたびに3桁が回転する。当たりの場合：まず少し回してから2桁を
+// 先に止め(リーチ開始)、残り1桁が回り続けたまま約5秒の緊張を作ってから
+// 3桁を揃え、0.5秒待って当選告知(onDone)へ進む。外れの場合：短い回転の
+// 後、揃わずに止まってすぐonDoneへ進む(数字自体は演出用の飾りで、
+// 当落は既にhold.outcomeで決まっている)。スキップ中は回転を見せず、
+// 結果の数字だけ即座に表示してonDoneへ進む。
+const LCD_SPIN_TICK_MS = 70;
+const LCD_REACH_START_DELAY_MS = 280;
+const LCD_REACH_HOLD_MS = 5000;
+const LCD_ALIGN_TO_NEXT_MS = 500;
+const LCD_MISS_SPIN_MS = 900;
+
+let lcdSpinIntervalId = null;
+
+function randomDigit() {
+  return Math.floor(Math.random() * 10);
+}
+
+// 外れ用：3桁が偶然揃ってしまわないよう、1桁目と異なる値を2・3桁目に選ぶ。
+function randomNonMatchingTriple() {
+  const a = randomDigit();
+  let b = randomDigit();
+  while (b === a) b = randomDigit();
+  let c = randomDigit();
+  while (c === a) c = randomDigit();
+  return [a, b, c];
+}
+
+function setLcdDigit(index, value) {
+  const el = lcdDigitEls[index];
+  if (el) el.textContent = value === null ? '-' : String(value);
+}
+
+function startLcdSpin(indices) {
+  stopLcdSpin();
+  lcdSpinIntervalId = setInterval(() => {
+    indices.forEach((i) => setLcdDigit(i, randomDigit()));
+  }, LCD_SPIN_TICK_MS);
+}
+
+function stopLcdSpin() {
+  if (lcdSpinIntervalId !== null) {
+    clearInterval(lcdSpinIntervalId);
+    lcdSpinIntervalId = null;
+  }
+}
+
+function resetLcdScreen() {
+  stopLcdSpin();
+  lcdScreenEl.classList.remove('lcd-reach', 'lcd-aligned');
+  setLcdDigit(0, null);
+  setLcdDigit(1, null);
+  setLcdDigit(2, null);
+}
+
+function runLcdSequence(isHit, onDone) {
+  lcdScreenEl.classList.remove('lcd-reach', 'lcd-aligned');
+
+  if (game.skipping) {
+    stopLcdSpin();
+    if (isHit) {
+      const d = randomDigit();
+      setLcdDigit(0, d);
+      setLcdDigit(1, d);
+      setLcdDigit(2, d);
+    } else {
+      randomNonMatchingTriple().forEach((d, i) => setLcdDigit(i, d));
+    }
+    game.pendingTimeoutId = setTimeout(onDone, 0);
     return;
   }
 
-  const isBig = hold.outcome === 'hit_big';
-  const balls = rushHitBalls(hold.outcome);
-  game.rushBalls += balls;
-  game.revealedChain += 1;
-  game.revealedStRemaining = game.stCountConst;
-  showHitAnnouncement(isBig, balls, game.revealedChain, () => {
-    hideOverlay();
-    fillHoldQueue();
-    scheduleHoldConsume();
-  });
+  if (!isHit) {
+    startLcdSpin([0, 1, 2]);
+    game.pendingTimeoutId = setTimeout(() => {
+      stopLcdSpin();
+      randomNonMatchingTriple().forEach((d, i) => setLcdDigit(i, d));
+      game.pendingTimeoutId = setTimeout(onDone, 0);
+    }, LCD_MISS_SPIN_MS);
+    return;
+  }
+
+  startLcdSpin([0, 1, 2]);
+  game.pendingTimeoutId = setTimeout(() => {
+    const d = randomDigit();
+    setLcdDigit(0, d);
+    setLcdDigit(1, d);
+    lcdScreenEl.classList.add('lcd-reach');
+    startLcdSpin([2]);
+    game.pendingTimeoutId = setTimeout(() => {
+      stopLcdSpin();
+      setLcdDigit(2, d);
+      lcdScreenEl.classList.remove('lcd-reach');
+      lcdScreenEl.classList.add('lcd-aligned');
+      game.pendingTimeoutId = setTimeout(onDone, LCD_ALIGN_TO_NEXT_MS);
+    }, LCD_REACH_HOLD_MS);
+  }, LCD_REACH_START_DELAY_MS);
 }
 
 // ---- 演出モード別の当選告知 ----
