@@ -486,10 +486,11 @@ function resolveHold(hold) {
   }
 
   const isHit = hold.outcome === 'hit_small' || hold.outcome === 'hit_big';
-  // 外れの一部(大当たり確率P_RUSHと同じ確率)でガセリーチ(はずれリーチ)
-  // を出す。当たりと同じ「はさみテンパイ」を見せてから、テンパイ数字+1
-  // (8の場合は1)で止まって外れる。
-  const isFakeReach = !isHit && Math.random() < P_RUSH;
+  // 外れの場合のガセリーチ(はずれリーチ)判定：当たりと同じ
+  // 「はさみテンパイ」を見せてから、テンパイ数字+1(8の場合は1)で
+  // 止まって外れる。保留の色が点滅以上(無色以外)なら必ずリーチする。
+  // 無色の場合は、大当たり確率P_RUSHと同じ確率で抽選する。
+  const isFakeReach = !isHit && (hold.color !== 'none' || Math.random() < P_RUSH);
   runLcdSequence(isHit, isFakeReach, () => {
     if (!isHit) {
       game.revealedStRemaining -= 1;
