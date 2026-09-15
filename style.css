@@ -499,9 +499,15 @@ select {
 }
 .btn-start:active { transform: scale(0.94); box-shadow: 0 0 10px rgba(240,192,64,0.2); }
 
+/* ビューポート全体を覆う(ヘッダー/液晶エリアより前面)。#appのmax-width
+   に合わせてmax-width+margin:autoで中央寄せし、幅の広い画面でも
+   本体の表示幅と揃える。 */
 #overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
+  max-width: 390px;
+  margin: 0 auto;
+  z-index: 20;
   background: #0d0d0d;
   display: flex;
   align-items: center;
