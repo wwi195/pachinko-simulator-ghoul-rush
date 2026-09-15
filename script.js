@@ -464,10 +464,26 @@ const HOLD_ARRIVAL_MS = 420;
 // 終わった瞬間(catchUpStockDisplay)まで遅らせる。
 function consumeNextHold() {
   const hold = game.holds.shift();
+  departFirstStockIcon();
   renderCurrentHold(hold);
 
   const revealDelay = game.skipping ? 0 : HOLD_ARRIVAL_MS;
   game.pendingTimeoutId = setTimeout(() => resolveHold(hold), revealDelay);
+}
+
+// 保留1(下段の先頭、holdIconEls[0])を、保留0の登場と同時に退出させる。
+// 保留2〜4は数字変動が終わるまで動かさない(catchUpStockDisplay参照)ため、
+// ここでは保留1だけを個別に処理する。保留1が実際には空(在庫が空の
+// 状態で再開した直後など、保留0を直接生成した場合)は、移動元が
+// 存在しないので退出演出そのものを出さない。
+function departFirstStockIcon() {
+  const el = holdIconEls[0];
+  if (!el) return;
+  const hasContent = HOLD_COLORS.some((c) => el.classList.contains(`hold-${c}`));
+  if (!hasContent) return;
+  el.classList.remove('hold-depart');
+  void el.offsetWidth;
+  el.classList.add('hold-depart');
 }
 
 // 数字変動が終わった瞬間に呼び、保留ストックの見た目をまとめて
