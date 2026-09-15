@@ -300,35 +300,22 @@ body {
     filter: drop-shadow(0 0 0 rgba(240, 192, 64, 0));
   }
 }
-/* 0.55秒。27%〜73%(約150ms〜400ms)を完全に見えたままの滞在時間とし、
-   すぐに消えてしまう印象を防ぐ。420ms(HOLD_ARRIVAL_MS)より短く保ち、
+/* 0.55秒。呼ばれる時点で保留0は既にcurrentHoldAppear(hold-pop)で
+   登場しきっている(translateY(0) scale(1.3) opacity:1)ので、0%は
+   その状態から始める。70%まで完全に見えたまま滞在させてから、
+   残りでフッと消える。0%を「下から浮き上がってくる途中」の状態
+   (低opacity・小scale)にしてしまうと、既に登場済みのアイコンが
+   このアニメーション開始と同時に一旦その状態へ巻き戻り、27%あたりで
+   フルスケールへ戻る…という「消えかけて即再出現する」ように見える
+   事故になる(以前の実装のバグ)。420ms(HOLD_ARRIVAL_MS)より短く保ち、
    最速設定(次の保留到着まで最短595ms)でも自然に消え切ってから
    次が来るようにしている。 */
 #current-hold-icon.hold-flash-out {
   animation: currentHoldFlashOut 0.55s ease-out forwards;
 }
 @keyframes currentHoldFlashOut {
-  0% {
-    transform: translateY(20px) rotate(50deg) scale(0.3);
-    opacity: 0.4;
-    filter:
-      drop-shadow(0 8px 3px rgba(240, 192, 64, 0.5))
-      drop-shadow(0 16px 5px rgba(240, 192, 64, 0.25));
-  }
-  27% {
-    transform: translateY(-3px) rotate(50deg) scale(1.5);
-    opacity: 1;
-    filter: drop-shadow(0 3px 2px rgba(240, 192, 64, 0.2));
-  }
-  36% {
-    transform: translateY(0) rotate(50deg) scale(1.3);
-    opacity: 1;
-    filter: drop-shadow(0 0 0 rgba(240, 192, 64, 0));
-  }
-  73% {
-    transform: rotate(50deg) scale(1.3);
-    opacity: 1;
-  }
+  0%   { transform: translateY(0) rotate(50deg) scale(1.3); opacity: 1; }
+  70%  { transform: translateY(0) rotate(50deg) scale(1.3); opacity: 1; }
   100% { transform: rotate(50deg) scale(0.4); opacity: 0; }
 }
 
