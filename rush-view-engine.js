@@ -92,12 +92,17 @@ const RAINBOW_OCCURRENCE_RATE = 0.0005; // 全保留のうち虹は0.05%固定
 const HIT_NONE_SHARE = 0.40;
 
 // 点滅/青/緑/赤の4色で、虹を除いた「色付き当選」枠をどう配分するかの比率
-// (4色の合計が1)。
+// (合計1である必要はなく、buildHoldColorWeights内で正規化される)。
+// このシェアの比率がそのままholdColorOccurrenceRateの出現率の比率になる
+// (buildHoldColorWeights内でreliability倍してからwHitに配分し、
+// pColor計算時にreliabilityで割り戻すため、shareの比率だけが残る)。
+// 赤は「緑の出現率のちょうど1/3になる」よう、緑のシェアから逆算している。
+const GREEN_OCCURRENCE_SHARE = 0.05;
 const HOLD_COLOR_OCCURRENCE_SHARE = {
   flash: 0.70,
   blue: 0.12,
-  green: 0.05,
-  red: 0.13,
+  green: GREEN_OCCURRENCE_SHARE,
+  red: GREEN_OCCURRENCE_SHARE / 3,
 };
 
 function buildHoldColorWeights() {

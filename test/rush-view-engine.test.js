@@ -143,6 +143,12 @@ test('holdColorOccurrenceRate: 点滅が色付き保留(none以外)の中で最�
   assert.equal(Math.max(...rates), rates[0], `rates=${JSON.stringify(rates)}`);
 });
 
+test('holdColorOccurrenceRate: 緑の出現率は赤のちょうど3倍', () => {
+  const green = holdColorOccurrenceRate('green');
+  const red = holdColorOccurrenceRate('red');
+  assertClose(green / red, 3, 0.001);
+});
+
 test('holdColorOccurrenceRate: 虹の出現率は全保留のうち0.05%固定', () => {
   assertClose(holdColorOccurrenceRate('rainbow'), 0.0005, 0.00001);
 });
