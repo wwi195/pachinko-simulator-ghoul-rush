@@ -478,7 +478,11 @@ function resolveHold(hold) {
   }
 
   const isHit = hold.outcome === 'hit_small' || hold.outcome === 'hit_big';
-  runLcdSequence(isHit, () => {
+  // 外れの一部(大当たり確率P_RUSHと同じ確率)でガセリーチ(はずれリーチ)
+  // を出す。当たりと同じ「はさみテンパイ」を見せてから、テンパイ数字+1
+  // (8の場合は1)で止まって外れる。
+  const isFakeReach = !isHit && Math.random() < P_RUSH;
+  runLcdSequence(isHit, isFakeReach, () => {
     if (!isHit) {
       game.revealedStRemaining -= 1;
       renderRushStatus();
@@ -509,10 +513,12 @@ function resolveHold(hold) {
 // 両端(1・3桁目)を先に止め(はさみテンパイ)、挟まれた真ん中の桁が
 // 回り続けたまま約3秒の緊張を作ってから3桁を揃え、0.5秒待って
 // onDoneへ進む(onDone側で3桁を一瞬消してから当選告知の画像に
-// 引き継ぐ、vanishLcdDigits参照)。外れの場合：短い回転の
-// 後、揃わずに止まってすぐonDoneへ進む(数字自体は演出用の飾りで、
-// 当落は既にhold.outcomeで決まっている)。スキップ中は回転を見せず、
-// 結果の数字だけ即座に表示してonDoneへ進む。
+// 引き継ぐ、vanishLcdDigits参照)。外れの場合：通常は短い回転の
+// 後、揃わずに止まってすぐonDoneへ進むが、一部(確率P_RUSH)は当たりと
+// 同じはさみテンパイを見せてから、テンパイ数字+1(8なら1)で止まる
+// ガセリーチになる(isFakeReach、nearMissDigit参照)。数字自体は演出用
+// の飾りで、当落は既にhold.outcomeで決まっている。スキップ中は
+// 回転を見せず、結果の数字だけ即座に表示してonDoneへ進む。
 const LCD_SPIN_TICK_MS = 70;
 const LCD_REACH_START_DELAY_MS = 280;
 const LCD_REACH_HOLD_MS = 3000;
@@ -533,6 +539,12 @@ function randomNonMatchingTriple() {
   let c = randomDigit();
   while (c === a) c = randomDigit();
   return [a, b, c];
+}
+
+// ガセリーチ(はずれリーチ)の真ん中の桁：テンパイ数字+1(8の場合は1)。
+// 例：テンパイ数字が2なら「2 3 2」のように1つだけずれて外れる。
+function nearMissDigit(reachDigit) {
+  return reachDigit >= 8 ? 1 : reachDigit + 1;
 }
 
 function setLcdDigit(index, value) {
@@ -583,8 +595,12 @@ function vanishLcdDigits(onDone) {
   }, delay);
 }
 
-function runLcdSequence(isHit, onDone) {
+// isHit: 当たりなら3桁を揃える。isFakeReach: 外れだが当たりと同じ
+// リーチ演出を見せてから、テンパイ数字+1で外れる(ガセリーチ)。
+// どちらもfalseなら、リーチなしの短い回転で外れる。
+function runLcdSequence(isHit, isFakeReach, onDone) {
   lcdScreenEl.classList.remove('lcd-reach', 'lcd-aligned');
+  const showReach = isHit || isFakeReach;
 
   if (game.skipping) {
     stopLcdSpin();
@@ -593,6 +609,12 @@ function runLcdSequence(isHit, onDone) {
       setLcdDigit(0, d);
       setLcdDigit(1, d);
       setLcdDigit(2, d);
+    } else if (isFakeReach) {
+      const d = randomDigit();
+      setLcdDigit(0, d);
+      setLcdDigit(1, nearMissDigit(d));
+      setLcdDigit(2, d);
+      flashOutCurrentHold();
     } else {
       randomNonMatchingTriple().forEach((d, i) => setLcdDigit(i, d));
       flashOutCurrentHold();
@@ -601,7 +623,7 @@ function runLcdSequence(isHit, onDone) {
     return;
   }
 
-  if (!isHit) {
+  if (!showReach) {
     startLcdSpin([0, 1, 2]);
     game.pendingTimeoutId = setTimeout(() => {
       stopLcdSpin();
@@ -612,6 +634,8 @@ function runLcdSequence(isHit, onDone) {
     return;
   }
 
+  // 当たり/ガセリーチ共通：両端(1・3桁目)を先に止め(はさみテンパイ)、
+  // 挟まれた真ん中の桁が回り続ける。
   startLcdSpin([0, 1, 2]);
   game.pendingTimeoutId = setTimeout(() => {
     const d = randomDigit();
@@ -621,10 +645,16 @@ function runLcdSequence(isHit, onDone) {
     startLcdSpin([1]);
     game.pendingTimeoutId = setTimeout(() => {
       stopLcdSpin();
-      setLcdDigit(1, d);
       lcdScreenEl.classList.remove('lcd-reach');
-      lcdScreenEl.classList.add('lcd-aligned');
-      game.pendingTimeoutId = setTimeout(onDone, LCD_ALIGN_TO_NEXT_MS);
+      if (isHit) {
+        setLcdDigit(1, d);
+        lcdScreenEl.classList.add('lcd-aligned');
+        game.pendingTimeoutId = setTimeout(onDone, LCD_ALIGN_TO_NEXT_MS);
+      } else {
+        setLcdDigit(1, nearMissDigit(d));
+        flashOutCurrentHold();
+        game.pendingTimeoutId = setTimeout(onDone, 0);
+      }
     }, LCD_REACH_HOLD_MS);
   }, LCD_REACH_START_DELAY_MS);
 }
