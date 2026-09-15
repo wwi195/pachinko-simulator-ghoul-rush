@@ -257,17 +257,6 @@ body {
   }
 }
 
-/* 保留1(下段の先頭)が保留0(中央)へ「移動していった」ように見せる、
-   保留0の登場アニメーションと同時に発火する退出演出。他の枠(保留2〜4)
-   は変動が終わるまで動かさないため、この退出は保留1のみに掛ける。 */
-.hold-icon.hold-depart {
-  animation: holdDepart 0.4s ease-in forwards;
-}
-@keyframes holdDepart {
-  0%   { transform: rotate(50deg) scale(1); opacity: 1; }
-  100% { transform: translateY(-24px) rotate(50deg) scale(0.4); opacity: 0; }
-}
-
 /* 保留の消滅アニメーション：現在処理中の保留(保留0)が外れだった場合、
    一瞬見せてからフッと消える。forwardsで消えた状態を維持する。 */
 .hold-icon.hold-flash-out {
