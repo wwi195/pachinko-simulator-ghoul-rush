@@ -434,18 +434,28 @@ function scheduleHoldConsume() {
 // 見てわかる判定タイムを作る。スキップ中は待たない。
 const HOLD_ARRIVAL_MS = 420;
 
+// 保留0の設置(消化開始)〜数字変動が終わるまでの間、保留ストック
+// (下段)の見た目は一切変えない。game.holds自体は消化と同時に
+// shift()するが、DOM描画(renderHolds/slideHoldIconsLeft)は変動が
+// 終わった瞬間(catchUpStockDisplay)まで遅らせる。
 function consumeNextHold() {
   const hold = game.holds.shift();
-  renderHolds();
-  slideHoldIconsLeft();
   renderCurrentHold(hold);
 
   const revealDelay = game.skipping ? 0 : HOLD_ARRIVAL_MS;
   game.pendingTimeoutId = setTimeout(() => resolveHold(hold), revealDelay);
 }
 
+// 数字変動が終わった瞬間に呼び、保留ストックの見た目をまとめて
+// (shift分のスライド)反映する。新規補充(pop)はfillHoldQueue側で別途行う。
+function catchUpStockDisplay() {
+  renderHolds();
+  slideHoldIconsLeft();
+}
+
 function resolveHold(hold) {
   if (hold.outcome === 'st_end') {
+    catchUpStockDisplay();
     resetLcdScreen();
     finishRush();
     return;
@@ -456,6 +466,7 @@ function resolveHold(hold) {
     if (!isHit) {
       game.revealedStRemaining -= 1;
       renderRushStatus();
+      catchUpStockDisplay();
       // scheduleHoldConsume()を先に呼ぶ理由はresumeHoldFlow()と同じ
       // (fillHoldQueue()は在庫0判定を壊してしまうため)。
       scheduleHoldConsume();
@@ -468,6 +479,7 @@ function resolveHold(hold) {
     game.rushBalls += balls;
     game.revealedChain += 1;
     game.revealedStRemaining = game.stCountConst;
+    catchUpStockDisplay();
     vanishLcdDigits(() => {
       showHitAnnouncement(isBig, balls, game.revealedChain, () => {
         hideOverlay();
