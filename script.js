@@ -264,6 +264,7 @@ function enterRush() {
   game.revealedChain = 0;
   game.paused = false;
   game.skipping = false;
+  fillHoldQueueActive = false;
   holdsRowEl.hidden = false;
   rushStatusRowEl.hidden = false;
   pauseRowEl.hidden = false;
@@ -316,14 +317,39 @@ function generateOneHold() {
 // 出現させながら順番に埋めていく(一気に全部出さない)。一時停止からの
 // 再開直後など、在庫がまとめて空だった場合でも1個ずつ貯まる様子が
 // 見えるようにするための挙動。一時停止中は補充しない(=新しい保留は増えない)。
+//
+// 呼び出し時点の不足数(deficit)を最初に確定し、その数だけ足したら
+// チェーンを終える。もし「上限に達するまで無条件に足し続ける」実装に
+// すると、「最速」設定(消化間隔175ms)のようにチェーンの間隔
+// (HOLD_REVEAL_STAGGER_MS=220ms)より消化ペースが速い場合、このチェーンの
+// 継続チェックが「別の消化サイクルが新しく空けた枠」にまで反応して
+// しまい、1回の保留消化に対して保留が2個出現しているように見える
+// 不具合があった。呼び出し時点の不足数だけを面倒見て終わることで、
+// 後から生じた不足は「その消化サイクル自身のfillHoldQueue呼び出し」に
+// 任せ、チェーン同士が干渉しないようにする。
+let fillHoldQueueActive = false;
+
 function fillHoldQueue() {
-  if (game.paused) return;
-  if (game.rushGenerationDone || game.holds.length >= MAX_HOLDS) return;
-  if (!generateOneHold()) return;
+  if (game.paused || fillHoldQueueActive || game.rushGenerationDone) return;
+  const deficit = MAX_HOLDS - game.holds.length;
+  if (deficit <= 0) return;
+  fillHoldQueueActive = true;
+  fillHoldQueueStep(deficit);
+}
+
+function fillHoldQueueStep(remaining) {
+  if (remaining <= 0 || game.paused || game.rushGenerationDone || game.holds.length >= MAX_HOLDS) {
+    fillHoldQueueActive = false;
+    return;
+  }
+  if (!generateOneHold()) {
+    fillHoldQueueActive = false;
+    return;
+  }
   renderHolds();
   popHoldIcon(game.holds.length - 1);
   const delay = game.skipping ? 0 : HOLD_REVEAL_STAGGER_MS;
-  setTimeout(fillHoldQueue, delay);
+  setTimeout(() => fillHoldQueueStep(remaining - 1), delay);
 }
 
 function renderHolds() {
