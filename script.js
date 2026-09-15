@@ -359,14 +359,23 @@ function slideHoldIconsLeft() {
 }
 
 // 現在処理中の保留(保留0)を、他より大きく単独で表示する。
-// 外れ(miss)なら一瞬見せてからフッと消え(hold-flash-out)、当たりなら
-// 表示され続ける(hold-pop、告知演出の裏で光ったままになる)。
+// 到着時点ではまだ当落は見せない(hold-pop)。外れが確定してフッと
+// 消える(hold-flash-out)のは、液晶の3桁が停止する瞬間に合わせて
+// flashOutCurrentHold()を別途呼ぶ(runLcdSequence側)。
 function renderCurrentHold(hold) {
   currentHoldIconEl.className = 'hold-icon';
   if (!hold) return;
   currentHoldIconEl.classList.add(`hold-${hold.color}`);
   void currentHoldIconEl.offsetWidth;
-  currentHoldIconEl.classList.add(hold.outcome === 'miss' ? 'hold-flash-out' : 'hold-pop');
+  currentHoldIconEl.classList.add('hold-pop');
+}
+
+// 外れ確定(液晶の3桁が停止する瞬間)に呼び、保留アイコンの消滅
+// タイミングを液晶の停止と揃える。
+function flashOutCurrentHold() {
+  currentHoldIconEl.classList.remove('hold-pop');
+  void currentHoldIconEl.offsetWidth;
+  currentHoldIconEl.classList.add('hold-flash-out');
 }
 
 function renderRushStatus() {
@@ -380,7 +389,7 @@ function renderRushStatus() {
 // 終わっている場合は、消化するものがないため待機状態にする。
 // それ以外(再開直後などで保留0のみ・在庫が空)の場合は、消化間隔を
 // 通常の5倍に伸ばし、fillHoldQueueが保留1〜4を1個ずつ貯める時間を作る。
-const EMPTY_STOCK_SLOWDOWN = 5;
+const EMPTY_STOCK_SLOWDOWN = 3;
 
 function scheduleHoldConsume() {
   if (game.holds.length === 0 && (game.paused || game.rushGenerationDone)) {
@@ -510,6 +519,7 @@ function runLcdSequence(isHit, onDone) {
       setLcdDigit(2, d);
     } else {
       randomNonMatchingTriple().forEach((d, i) => setLcdDigit(i, d));
+      flashOutCurrentHold();
     }
     game.pendingTimeoutId = setTimeout(onDone, 0);
     return;
@@ -520,6 +530,7 @@ function runLcdSequence(isHit, onDone) {
     game.pendingTimeoutId = setTimeout(() => {
       stopLcdSpin();
       randomNonMatchingTriple().forEach((d, i) => setLcdDigit(i, d));
+      flashOutCurrentHold();
       game.pendingTimeoutId = setTimeout(onDone, 0);
     }, LCD_MISS_SPIN_MS);
     return;
