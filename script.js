@@ -439,14 +439,23 @@ function renderRushStatus() {
 // 通常の5倍に伸ばし、fillHoldQueueが保留1〜4を1個ずつ貯める時間を作る。
 const EMPTY_STOCK_SLOWDOWN = 3;
 
-function scheduleHoldConsume() {
+// 保留0の外れフラッシュアウト(#current-hold-icon.hold-flash-out、
+// style.cssのcurrentHoldFlashOutと同じ0.55秒)の再生が終わるまでの
+// 最短保証時間。「速い」(350ms)「最速」(175ms)設定だと、この時間より
+// 先に次の保留が到着してしまい、フェードアウトの途中でいきなり次の
+// 登場アニメーションに切り替わって「消えかけ→すぐ出現」に見える
+// 事故があったため、外れ後の呼び出し(minDelayMs指定時)だけ間隔を
+// この時間以上に底上げする。
+const CURRENT_HOLD_FLASH_OUT_MS = 550;
+
+function scheduleHoldConsume(minDelayMs = 0) {
   if (game.holds.length === 0 && (game.paused || game.rushGenerationDone)) {
     game.pendingTimeoutId = null;
     return;
   }
   const baseInterval = rushSpeedIntervalMs(game.speed);
   const interval = game.holds.length === 0 ? baseInterval * EMPTY_STOCK_SLOWDOWN : baseInterval;
-  const delay = game.skipping ? 0 : interval;
+  const delay = game.skipping ? 0 : Math.max(interval, minDelayMs);
   game.pendingTimeoutId = setTimeout(consumeNextHold, delay);
 }
 
@@ -487,8 +496,9 @@ function resolveHold(hold) {
       game.revealedStRemaining -= 1;
       renderRushStatus();
       // scheduleHoldConsume()を先に呼ぶ理由はresumeHoldFlow()と同じ
-      // (fillHoldQueue()は在庫0判定を壊してしまうため)。
-      scheduleHoldConsume();
+      // (fillHoldQueue()は在庫0判定を壊してしまうため)。外れの直後は
+      // 保留0のフラッシュアウト再生時間を最短保証する(上のコメント参照)。
+      scheduleHoldConsume(CURRENT_HOLD_FLASH_OUT_MS);
       fillHoldQueue();
       return;
     }
