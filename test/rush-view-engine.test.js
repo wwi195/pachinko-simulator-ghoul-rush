@@ -79,19 +79,17 @@ test('rollHoldColor: missでrng=0はnone(無色、圧倒的多数派)', () => {
   assert.equal(rollHoldColor('miss', () => 0), 'none');
 });
 
-test('rollHoldColor: missでrng=0.999はflash(noneの次に多いランク)', () => {
-  assert.equal(rollHoldColor('miss', () => 0.999), 'flash');
-});
-
-test('rollHoldColor: missでrng=0.9999999はred(missの中で最高ランク、出現率0.0002%未満)', () => {
-  assert.equal(rollHoldColor('miss', () => 0.9999999), 'red');
+test('rollHoldColor: missでの無色の重みは95%を超える(外れの大部分は無色のまま)', () => {
+  const w = HOLD_COLOR_WEIGHTS.miss;
+  const total = HOLD_COLORS.reduce((sum, c) => sum + w[c], 0);
+  assert.ok(w.none / total > 0.95, `none share = ${w.none / total}`);
 });
 
 test('rollHoldColor: st_endはmissと同じ重みなのでrng=0はnone', () => {
   assert.equal(rollHoldColor('st_end', () => 0), 'none');
 });
 
-test('rollHoldColor: hit_bigでもrng=0はnone(当選時ですらnoneが最多)', () => {
+test('rollHoldColor: hit_bigでもrng=0はnone', () => {
   assert.equal(rollHoldColor('hit_big', () => 0), 'none');
 });
 
@@ -99,7 +97,7 @@ test('rollHoldColor: hit_smallでrng=0.999はrainbow', () => {
   assert.equal(rollHoldColor('hit_small', () => 0.999), 'rainbow');
 });
 
-const { holdColorHitRate } = require('../rush-view-engine.js');
+const { holdColorHitRate, holdColorOccurrenceRate } = require('../rush-view-engine.js');
 
 function assertClose(actual, expected, epsilon = 0.001) {
   assert.ok(
@@ -108,8 +106,8 @@ function assertClose(actual, expected, epsilon = 0.001) {
   );
 }
 
-test('holdColorHitRate: 無色は1%、虹は100%(当選濃厚)', () => {
-  assertClose(holdColorHitRate('none'), 0.01, 0.0001);
+test('holdColorHitRate: 無色はごく低い信頼度、虹は100%(当選濃厚)', () => {
+  assert.ok(holdColorHitRate('none') < 0.01, `none reliability = ${holdColorHitRate('none')}`);
   assert.equal(holdColorHitRate('rainbow'), 1);
 });
 
@@ -120,12 +118,39 @@ test('holdColorHitRate: 点滅<青<緑<赤<虹の順で信頼度が上がる', (
   }
 });
 
-test('holdColorHitRate: 指定された目標信頼度(無色1%/点滅7%/青33%/緑55%/赤95%)通りに算出される', () => {
-  assertClose(holdColorHitRate('none'), 0.01, 0.0001);
+test('holdColorHitRate: 指定された目標信頼度(点滅7%/青33%/緑55%/赤95%)通りに算出される', () => {
   assertClose(holdColorHitRate('flash'), 0.07, 0.0001);
   assertClose(holdColorHitRate('blue'), 0.33, 0.0001);
   assertClose(holdColorHitRate('green'), 0.55, 0.0001);
   assertClose(holdColorHitRate('red'), 0.95, 0.0001);
+});
+
+test('holdColorOccurrenceRate: 全保留のうち無色が占める割合は90%〜100%の間', () => {
+  const rate = holdColorOccurrenceRate('none');
+  assert.ok(rate > 0.9 && rate < 1, `none occurrence = ${rate}`);
+});
+
+test('holdColorOccurrenceRate: 赤は虹より出現しやすい(赤が虹に隠れて目立たない問題を修正)', () => {
+  assert.ok(
+    holdColorOccurrenceRate('red') > holdColorOccurrenceRate('rainbow'),
+    `red=${holdColorOccurrenceRate('red')}, rainbow=${holdColorOccurrenceRate('rainbow')}`
+  );
+});
+
+test('holdColorOccurrenceRate: 点滅が色付き保留(none以外)の中で最も出現しやすい', () => {
+  const colored = ['flash', 'blue', 'green', 'red', 'rainbow'];
+  const rates = colored.map(holdColorOccurrenceRate);
+  assert.equal(Math.max(...rates), rates[0], `rates=${JSON.stringify(rates)}`);
+});
+
+test('holdColorOccurrenceRate: 虹の出現率は全保留のうち0.05%固定', () => {
+  assertClose(holdColorOccurrenceRate('rainbow'), 0.0005, 0.00001);
+});
+
+test('HOLD_COLOR_WEIGHTS: 当選(hit)のうち無色のまま当たる割合は40%', () => {
+  const hit = HOLD_COLOR_WEIGHTS.hit_small;
+  const total = HOLD_COLORS.reduce((sum, c) => sum + hit[c], 0);
+  assertClose(hit.none / total, 0.40, 0.0001);
 });
 
 const {

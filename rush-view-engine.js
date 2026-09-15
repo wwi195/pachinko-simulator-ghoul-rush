@@ -68,16 +68,78 @@ function simulateInvestment(spinRate) {
 
 const HOLD_COLORS = ['none', 'flash', 'blue', 'green', 'red', 'rainbow'];
 
-// 保留取得時に、実際の抽選結果(outcome)に応じて先読み示唆の色を確率的に選ぶ。
-// 指定された信頼度(holdColorHitRateで計算した「見えている色から見た実際の当選率」が
-// 無色1%/点滅7%/青33%/緑55%/赤95%/虹確定 になるよう、P_RUSH・P_RUSH_BIGを踏まえて
-// 逆算した重み。hit_small/hit_bigは区別せず同じ重みを使う(信頼度は当選サイズを問わない)。
-const HOLD_COLOR_WEIGHTS = {
-  miss:      { none: 99.8365147903017, flash: 0.1408877442811695, blue: 0.017224203862591984, green: 0.005205822809216234, red: 0.00016743874532566854, rainbow: 0 },
-  st_end:    { none: 99.8365147903017, flash: 0.1408877442811695, blue: 0.017224203862591984, green: 0.005205822809216234, red: 0.00016743874532566854, rainbow: 0 },
-  hit_small: { none: 95.09680146187323, flash: 1, blue: 0.8, green: 0.6, red: 0.3, rainbow: 2.2031985381267716 },
-  hit_big:   { none: 95.09680146187323, flash: 1, blue: 0.8, green: 0.6, red: 0.3, rainbow: 2.2031985381267716 },
+// 保留色の「狙い」を独立したパラメータで表す。
+// - RELIABILITY: この色が出たとき実際に当選(hit_small/hit_big)である confirmed 率(0〜1)
+// - RAINBOW_OCCURRENCE_RATE: 虹だけは出現率(全保留中の割合)を直接指定する
+//   (「レア中のレア」の絶対値を固定したいという要望のため)
+// - HIT_NONE_SHARE: 当選(hit_small/hit_big)のうち、何も色がつかず無色のまま
+//   当たる割合(0〜1)。残り(1 - HIT_NONE_SHARE)から虹の取り分を引いた分を、
+//   点滅/青/緑/赤の4色にOCCURRENCE_SHAREの比率で配分する。
+// 実際にrollHoldColorが使う重み(HOLD_COLOR_WEIGHTS)はbuildHoldColorWeights()で
+// これらから自動的に逆算する。値をここだけ変えれば他は自動で追従する
+// (調整のたびに手計算しなくてよい)。
+const HOLD_COLOR_RELIABILITY = {
+  flash: 0.07,
+  blue: 0.33,
+  green: 0.55,
+  red: 0.95,
+  rainbow: 1,
 };
+
+const RAINBOW_OCCURRENCE_RATE = 0.0005; // 全保留のうち虹は0.05%固定
+
+// 当選(hit_small/hit_big)のうち、無色のまま当たる割合。
+const HIT_NONE_SHARE = 0.40;
+
+// 点滅/青/緑/赤の4色で、虹を除いた「色付き当選」枠をどう配分するかの比率
+// (4色の合計が1)。
+const HOLD_COLOR_OCCURRENCE_SHARE = {
+  flash: 0.70,
+  blue: 0.12,
+  green: 0.05,
+  red: 0.13,
+};
+
+function buildHoldColorWeights() {
+  const pHit = _logic.P_RUSH;
+  const pMissLike = 1 - pHit;
+
+  function deriveWeights(color, wHit) {
+    const reliability = HOLD_COLOR_RELIABILITY[color];
+    const wMiss = reliability >= 1
+      ? 0
+      : (wHit * pHit * (1 - reliability)) / (reliability * pMissLike);
+    return wMiss;
+  }
+
+  const hit = {};
+  const miss = {};
+
+  // 虹は出現率(全保留中の割合)を直接指定されているので、それをwHitに逆算する。
+  const rainbowReliability = HOLD_COLOR_RELIABILITY.rainbow;
+  hit.rainbow = (RAINBOW_OCCURRENCE_RATE * 100 * rainbowReliability) / pHit;
+  miss.rainbow = deriveWeights('rainbow', hit.rainbow);
+
+  // 当選のうちHIT_NONE_SHAREぶんは無色、虹はhit.rainbowぶん消費済みなので、
+  // 残りを点滅/青/緑/赤の4色にOCCURRENCE_SHAREの比率(×reliability)で配分する。
+  const remainingHitBudget = 100 * (1 - HIT_NONE_SHARE) - hit.rainbow;
+  const shareColors = Object.keys(HOLD_COLOR_OCCURRENCE_SHARE);
+  const weightedShareTotal = shareColors.reduce(
+    (sum, c) => sum + HOLD_COLOR_OCCURRENCE_SHARE[c] * HOLD_COLOR_RELIABILITY[c],
+    0
+  );
+  for (const color of shareColors) {
+    const weightedShare = HOLD_COLOR_OCCURRENCE_SHARE[color] * HOLD_COLOR_RELIABILITY[color];
+    hit[color] = remainingHitBudget * (weightedShare / weightedShareTotal);
+    miss[color] = deriveWeights(color, hit[color]);
+  }
+
+  hit.none = 100 - Object.values(hit).reduce((sum, v) => sum + v, 0);
+  miss.none = 100 - Object.values(miss).reduce((sum, v) => sum + v, 0);
+  return { miss, st_end: miss, hit_small: hit, hit_big: hit };
+}
+
+const HOLD_COLOR_WEIGHTS = buildHoldColorWeights();
 
 function rollHoldColor(outcome, rng = Math.random) {
   const weights = HOLD_COLOR_WEIGHTS[outcome];
@@ -90,10 +152,9 @@ function rollHoldColor(outcome, rng = Math.random) {
   return HOLD_COLORS[HOLD_COLORS.length - 1];
 }
 
-// 保留の色ごとに「実際に当選(hit_small/hit_big)である確率」を計算する。
-// 開始画面の信頼度表示に使う。HOLD_COLOR_WEIGHTSやRUSH当選確率(P_RUSH/P_RUSH_BIG)が
-// 変わっても自動で追従する(値をここに直書きしない)。
-function holdColorHitRate(color) {
+// 保留を1個取得したとき、その保留がこの色になる確率(全保留中での出現率)。
+// 開始画面の発生率表示や、色バランスの検証に使う。
+function holdColorOccurrenceRate(color) {
   const pHit = _logic.P_RUSH;
   const pHitSmall = pHit * (1 - _logic.P_RUSH_BIG);
   const pHitBig = pHit * _logic.P_RUSH_BIG;
@@ -103,7 +164,21 @@ function holdColorHitRate(color) {
   const wHitSmall = HOLD_COLOR_WEIGHTS.hit_small[color] / 100;
   const wHitBig = HOLD_COLOR_WEIGHTS.hit_big[color] / 100;
 
-  const pColor = pMissLike * wMiss + pHitSmall * wHitSmall + pHitBig * wHitBig;
+  return pMissLike * wMiss + pHitSmall * wHitSmall + pHitBig * wHitBig;
+}
+
+// 保留の色ごとに「実際に当選(hit_small/hit_big)である確率」を計算する。
+// 開始画面の信頼度表示に使う。HOLD_COLOR_WEIGHTSやRUSH当選確率(P_RUSH/P_RUSH_BIG)が
+// 変わっても自動で追従する(値をここに直書きしない)。
+function holdColorHitRate(color) {
+  const pHit = _logic.P_RUSH;
+  const pHitSmall = pHit * (1 - _logic.P_RUSH_BIG);
+  const pHitBig = pHit * _logic.P_RUSH_BIG;
+
+  const wHitSmall = HOLD_COLOR_WEIGHTS.hit_small[color] / 100;
+  const wHitBig = HOLD_COLOR_WEIGHTS.hit_big[color] / 100;
+
+  const pColor = holdColorOccurrenceRate(color);
   if (pColor === 0) return 0;
   return (pHitSmall * wHitSmall + pHitBig * wHitBig) / pColor;
 }
@@ -146,6 +221,7 @@ if (typeof module !== 'undefined' && module.exports) {
     HOLD_COLOR_WEIGHTS,
     rollHoldColor,
     holdColorHitRate,
+    holdColorOccurrenceRate,
     RUSH_MODE_OPTIONS,
     DEFAULT_RUSH_MODE,
     MAX_HOLDS,
