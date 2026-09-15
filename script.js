@@ -496,7 +496,7 @@ const LCD_MISS_SPIN_MS = 450;
 let lcdSpinIntervalId = null;
 
 function randomDigit() {
-  return Math.floor(Math.random() * 10);
+  return Math.floor(Math.random() * 8) + 1; // 1〜8
 }
 
 // 外れ用：3桁が偶然揃ってしまわないよう、1桁目と異なる値を2・3桁目に選ぶ。

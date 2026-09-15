@@ -276,7 +276,7 @@ body {
    移動中の光の尾(トレイル)を表現する。トレイルの色はアクセントカラー(金)で統一し、
    保留の色そのものは問わない演出専用の光跡として扱う。 */
 #current-hold-icon.hold-pop {
-  animation: currentHoldAppear 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: currentHoldAppear 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 @keyframes currentHoldAppear {
   0% {
