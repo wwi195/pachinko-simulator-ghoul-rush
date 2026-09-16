@@ -342,6 +342,40 @@ body {
   border-top: 1px solid #1e1e1e;
 }
 
+.hrow-tsukiyama-btn {
+  justify-content: center;
+  padding: 6px 12px;
+}
+
+.tsukiyama-btn {
+  width: 100%;
+  max-width: 260px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #1a1a1a;
+  border: 2px solid #666;
+  font-size: 14px;
+  font-weight: bold;
+  color: #ccc;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.tsukiyama-btn:disabled { cursor: default; }
+
+.tsukiyama-btn.tsukiyama-btn-none    { background: #2a2a2a; border-color: #555; color: #aaa; }
+.tsukiyama-btn.tsukiyama-btn-flash   { background: #3a3a3a; border-color: #999; color: #eee; }
+.tsukiyama-btn.tsukiyama-btn-blue    { background: #1d4d8f; border-color: #66aaff; color: #fff; box-shadow: 0 0 12px rgba(66,150,255,0.6); }
+.tsukiyama-btn.tsukiyama-btn-green   { background: #1c7a45; border-color: #66dd99; color: #fff; box-shadow: 0 0 12px rgba(66,220,150,0.6); }
+.tsukiyama-btn.tsukiyama-btn-red     { background: #8f1d1d; border-color: #ff7777; color: #fff; box-shadow: 0 0 14px rgba(255,80,80,0.7); }
+.tsukiyama-btn.tsukiyama-btn-rainbow {
+  border-color: #fff;
+  color: #fff;
+  background: linear-gradient(90deg, #ff3b3b, #ff9d3b, #ffe93b, #3bff6a, #3bcfff, #6a3bff, #ff3bcf, #ff3b3b);
+  background-size: 400% 100%;
+  animation: rush-rainbow 2s linear infinite;
+  box-shadow: 0 0 18px rgba(255,255,255,0.8);
+}
+
 .hrow-mode-row {
   justify-content: center;
   padding: 6px 12px 3px;
@@ -528,15 +562,13 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
 }
 
+/* 全画面を覆う大きさにする(カード風の余白・枠は付けない)。 */
 .rize-flash-img {
   width: 100%;
-  max-width: 280px;
-  border-radius: 12px;
-  border: 3px solid #7fd4ff;
-  box-shadow: 0 0 24px rgba(127,212,255,0.6);
+  height: 100%;
+  object-fit: cover;
   animation: fadeIn 0.2s ease;
 }
 

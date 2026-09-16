@@ -25,6 +25,7 @@ let rateSelectEl, modeSelectEl, speedSelectEl, startBtnEl,
     overlayEl, overlayBoxEl, rizeFlashOverlayEl, startControlsEl,
     totalPlaysValueEl, totalProfitValueEl, maxChainValueEl, totalBallsValueEl,
     holdsRowEl, holdIconEls, currentHoldIconEl, lcdScreenEl, lcdDigitEls, rushStatusRowEl,
+    tsukiyamaBtnRowEl, tsukiyamaBtnEl,
     stRemainingValueEl, chainCountValueEl, rushBallsValueEl,
     rushMoneyRowEl, rushToushiValueEl, rushProfitValueEl,
     pauseRowEl, pauseBtnEl, endRushBtnEl, rushSpeedBtnsEl, rushModeBtnsEl, holdLegendBodyEl,
@@ -48,6 +49,8 @@ function cacheDomRefs() {
   currentHoldIconEl = document.getElementById('current-hold-icon');
   lcdScreenEl = document.getElementById('lcd-screen');
   lcdDigitEls = Array.from(document.querySelectorAll('.lcd-digit'));
+  tsukiyamaBtnRowEl = document.getElementById('tsukiyama-btn-row');
+  tsukiyamaBtnEl = document.getElementById('tsukiyama-btn');
   rushStatusRowEl = document.getElementById('rush-status-row');
   stRemainingValueEl = document.getElementById('st-remaining-value');
   chainCountValueEl = document.getElementById('chain-count-value');
@@ -124,6 +127,14 @@ function bindEvents() {
   });
   pauseBtnEl.addEventListener('click', togglePause);
   endRushBtnEl.addEventListener('click', endRushNow);
+  // 月山絶叫モードの予告ボタン：一度押したら連打できないよう無効化し、
+  // 保留色と同じ抽選(rollHoldColor)で色を1回だけ決めて光らせる。
+  tsukiyamaBtnEl.addEventListener('click', () => {
+    if (tsukiyamaBtnEl.disabled || tsukiyamaBtnOutcome === null) return;
+    tsukiyamaBtnEl.disabled = true;
+    const color = rollHoldColor(tsukiyamaBtnOutcome);
+    tsukiyamaBtnEl.classList.add(`tsukiyama-btn-${color}`);
+  });
   introTabBtnEl.addEventListener('click', () => {
     introTextEl.hidden = !introTextEl.hidden;
     introTabBtnEl.textContent = introTextEl.hidden ? '説明を見る' : '説明を閉じる';
@@ -541,6 +552,28 @@ function consumeNextHold() {
   game.pendingTimeoutId = setTimeout(() => resolveHold(hold), revealDelay);
 }
 
+// 月山絶叫モード専用：予告ボタン。リーチ(当たり・ガセリーチ問わず)に
+// 入った瞬間に表示し、押すと保留色と同じ仕組み(rollHoldColor)で色を
+// 1回だけ抽選して光らせる(虹=当選濃厚)。押しても押さなくても、裏の
+// リーチ演出(テンパイ→揃う)には一切影響しない。押した瞬間の当落は
+// tsukiyamaBtnOutcomeに保持しておく(クリックハンドラは引数を取れない
+// ため)。
+let tsukiyamaBtnOutcome = null;
+
+function showTsukiyamaButton(outcome) {
+  tsukiyamaBtnOutcome = outcome;
+  tsukiyamaBtnEl.className = 'tsukiyama-btn';
+  tsukiyamaBtnEl.disabled = false;
+  tsukiyamaBtnRowEl.hidden = false;
+}
+
+function hideTsukiyamaButton() {
+  tsukiyamaBtnRowEl.hidden = true;
+  tsukiyamaBtnEl.className = 'tsukiyama-btn';
+  tsukiyamaBtnEl.disabled = false;
+  tsukiyamaBtnOutcome = null;
+}
+
 const TOKIGEKI_SENBARE_MS = 1000;
 
 // 突撃モード専用：先バレ画像+「手落下！」を1秒だけ映してから消す。
@@ -567,6 +600,13 @@ function resolveHold(hold) {
   // isReach/reachDigitは保留生成時(generateOneHold)に確定済み。ここでは
   // 何も抽選せず、その結果をそのまま再生する。
   runLcdSequence(isHit, hold.isReach, hold.reachDigit, () => {
+    // 月山絶叫モード：リーチ(当たり・ガセリーチ問わず)に入った瞬間だけ
+    // 予告ボタンを表示する。裏では通常のリーチ演出がそのまま進む。
+    if (hold.mode === 'tsukiyama') {
+      showTsukiyamaButton(hold.outcome);
+    }
+  }, () => {
+    hideTsukiyamaButton();
     if (!isHit) {
       game.revealedStRemaining -= 1;
       renderRushStatus();
@@ -686,8 +726,10 @@ function vanishLcdDigits(onDone) {
 // リーチ演出を見せてから、テンパイ数字+1で外れる(ガセリーチ)。
 // どちらもfalseなら、リーチなしの短い回転で外れる。reachDigitは
 // isReach時のテンパイ数字(generateOneHoldで確定済み、isReach=falseなら
-// null)。
-function runLcdSequence(isHit, isReach, reachDigit, onDone) {
+// null)。onReachStartは、はさみテンパイが成立してリーチ状態に入った
+// 瞬間(lcd-reachクラス付与時)に呼ばれる(月山絶叫モードの予告ボタン
+// 表示に使う)。スキップ中はリーチ演出自体を見せないため呼ばれない。
+function runLcdSequence(isHit, isReach, reachDigit, onReachStart, onDone) {
   lcdScreenEl.classList.remove('lcd-reach', 'lcd-aligned');
 
   if (game.skipping) {
@@ -730,6 +772,7 @@ function runLcdSequence(isHit, isReach, reachDigit, onDone) {
     setLcdDigit(0, d);
     setLcdDigit(2, d);
     lcdScreenEl.classList.add('lcd-reach');
+    onReachStart();
     startLcdSpin([1]);
     game.pendingTimeoutId = setTimeout(() => {
       stopLcdSpin();
@@ -803,6 +846,7 @@ function showTsukiyamaCountdown(onDone) {
 
 function finishRush() {
   stopHoldFillLoop();
+  hideTsukiyamaButton();
 
   const chain = game.revealedChain;
   const balls = game.rushBalls;

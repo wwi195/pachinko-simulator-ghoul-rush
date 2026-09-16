@@ -48,6 +48,13 @@
         </div>
       </div>
 
+      <!-- 月山絶叫モード専用：リーチ中(当たり・ガセリーチ問わず)だけ表示され、
+           押すとその場で色が光って先に信頼度を示す予告ボタン。裏では
+           通常のリーチ演出(テンパイ→揃う)がそのまま進む。 -->
+      <div class="hrow hrow-tsukiyama-btn" id="tsukiyama-btn-row" hidden>
+        <button type="button" class="tsukiyama-btn" id="tsukiyama-btn">絶叫ボタン</button>
+      </div>
+
       <div class="hrow hrow-rush-status" id="rush-status-row" hidden>
         <div class="esup-block">
           <div class="esup-label">ST残り</div>
@@ -124,7 +131,7 @@
            映るrize画像。#overlay(保留消化側の演出)とは別系統のタイマーで
            動くため、同時に表示され得る(#overlayより手前に出す)。 -->
       <div id="rize-flash-overlay" hidden>
-        <img src="画像/rize.webp" class="rize-flash-img" alt="リゼ襲来">
+        <img src="画像/rize.jpg" class="rize-flash-img" alt="リゼ襲来">
       </div>
     </div>
 
