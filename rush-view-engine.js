@@ -216,6 +216,86 @@ function rushHitBalls(outcome) {
   return RUSH_HIT_BALLS[outcome];
 }
 
+// テンパイ数字(1〜8)ごとに「信頼度」を持たせる仕組み。保留色の
+// reliability/occurrenceShareと全く同じ考え方で、当落そのもの
+// (P_RUSHによる抽選)には一切手を触れず、「リーチの両端に表示する
+// 数字をどれにするか」だけを当落に応じた重み付き抽選にする。
+// これにより、特定の数字(7・3)が出たときの体感信頼度を上げつつ、
+// ST中の大当たり確率・継続率は実機(P_RUSH)のまま変えずに済む。
+const REACH_DIGITS = [1, 2, 3, 4, 5, 6, 7, 8];
+
+// 7・3だけ信頼度と当選時の出現率を明示指定し、残り6数字は当選枠の
+// 残り(100 - 指定した出現率の合計)を均等に分け合う(保留色のnoneと
+// 同じ「残りを引き受ける」役割)。
+const REACH_DIGIT_RELIABILITY = { 7: 1, 3: 0.9 };
+const REACH_DIGIT_HIT_SHARE = { 7: 5, 3: 10 }; // 当選時の出現率(%)
+const OTHER_REACH_DIGITS = REACH_DIGITS.filter((d) => !(d in REACH_DIGIT_HIT_SHARE));
+
+function buildReachDigitWeights() {
+  const pHit = _logic.P_RUSH;
+  // 保留色の重み(HOLD_COLOR_WEIGHTS)から、「外れでもガセリーチが起きる確率」を求める。
+  // 色が無色以外なら必ずガセリーチ、無色ならP_RUSHと同じ確率でガセリーチする
+  // (script.jsのisFakeReach判定と同じ式)。
+  const missNoneShare = HOLD_COLOR_WEIGHTS.miss.none / 100;
+  const pFakeReachGivenMiss = (1 - missNoneShare) + missNoneShare * pHit;
+  const pFakeReach = (1 - pHit) * pFakeReachGivenMiss;
+
+  const hit = {};
+  const miss = {};
+
+  const otherHitShare = (100 - Object.values(REACH_DIGIT_HIT_SHARE).reduce((s, v) => s + v, 0))
+    / OTHER_REACH_DIGITS.length;
+
+  for (const digit of REACH_DIGITS) {
+    hit[digit] = digit in REACH_DIGIT_HIT_SHARE ? REACH_DIGIT_HIT_SHARE[digit] : otherHitShare;
+  }
+
+  // reliability(d) = pHit*hit[d] / (pHit*hit[d] + pFakeReach*miss[d]) となるよう、
+  // 指定された信頼度(7・3)からmiss[d]を逆算する。
+  for (const digit of [7, 3]) {
+    const reliability = REACH_DIGIT_RELIABILITY[digit];
+    miss[digit] = reliability >= 1
+      ? 0
+      : (hit[digit] * pHit * (1 - reliability)) / (reliability * pFakeReach);
+  }
+  // 残り6数字はmissの残り枠を均等に分け合う(hit同様、保留色のnoneと同じ役割)。
+  const otherMissShare = (100 - miss[7] - miss[3]) / OTHER_REACH_DIGITS.length;
+  for (const digit of OTHER_REACH_DIGITS) {
+    miss[digit] = otherMissShare;
+  }
+
+  return { hit, miss };
+}
+
+const REACH_DIGIT_WEIGHTS = buildReachDigitWeights();
+
+// isHit(このリーチは本物の当たりか、外れのガセリーチか)に応じて、
+// リーチの両端に表示するテンパイ数字を重み付きで選ぶ。
+function rollReachDigit(isHit, rng = Math.random) {
+  const weights = isHit ? REACH_DIGIT_WEIGHTS.hit : REACH_DIGIT_WEIGHTS.miss;
+  const total = REACH_DIGITS.reduce((sum, d) => sum + weights[d], 0);
+  let r = rng() * total;
+  for (const digit of REACH_DIGITS) {
+    r -= weights[digit];
+    if (r < 0) return digit;
+  }
+  return REACH_DIGITS[REACH_DIGITS.length - 1];
+}
+
+// このテンパイ数字が出たとき、実際に当たりである確率。
+function reachDigitHitRate(digit) {
+  const pHit = _logic.P_RUSH;
+  const missNoneShare = HOLD_COLOR_WEIGHTS.miss.none / 100;
+  const pFakeReach = (1 - pHit) * ((1 - missNoneShare) + missNoneShare * pHit);
+
+  const wHit = REACH_DIGIT_WEIGHTS.hit[digit] / 100;
+  const wMiss = REACH_DIGIT_WEIGHTS.miss[digit] / 100;
+
+  const pDigit = pHit * wHit + pFakeReach * wMiss;
+  if (pDigit === 0) return 0;
+  return (pHit * wHit) / pDigit;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     YEN_PER_BALL,
@@ -235,5 +315,9 @@ if (typeof module !== 'undefined' && module.exports) {
     rushSpeedIntervalMs,
     RUSH_HIT_BALLS,
     rushHitBalls,
+    REACH_DIGITS,
+    REACH_DIGIT_WEIGHTS,
+    rollReachDigit,
+    reachDigitHitRate,
   };
 }

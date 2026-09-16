@@ -327,7 +327,10 @@ function generateOneHold() {
   // リーチする。無色の場合は、大当たり確率P_RUSHと同じ確率で抽選する。
   const isFakeReach = !isHit && (color !== 'none' || Math.random() < P_RUSH);
   const isReach = isHit || isFakeReach;
-  const reachDigit = isReach ? randomDigit() : null;
+  // テンパイ数字は当落そのものには影響しない(P_RUSHのみで決まる)が、
+  // どの数字を表示するかはisHitに応じた重み付き抽選にしている
+  // (rollReachDigit、7・3は信頼度が高い代わりに出現率を下げてある)。
+  const reachDigit = isReach ? rollReachDigit(isHit) : null;
 
   game.holds.push({ outcome, color, isReach, reachDigit });
   if (outcome === 'st_end') {

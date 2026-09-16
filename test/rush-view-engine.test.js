@@ -208,3 +208,49 @@ test('rushHitBalls: hit_smallは2800球、hit_bigは5600球', () => {
   assert.equal(rushHitBalls('hit_small'), 2800);
   assert.equal(rushHitBalls('hit_big'), 5600);
 });
+
+const {
+  REACH_DIGITS,
+  REACH_DIGIT_WEIGHTS,
+  rollReachDigit,
+  reachDigitHitRate,
+} = require('../rush-view-engine.js');
+
+test('REACH_DIGITS は1〜8の8種類', () => {
+  assert.deepEqual(REACH_DIGITS, [1, 2, 3, 4, 5, 6, 7, 8]);
+});
+
+test('REACH_DIGIT_WEIGHTS の各行(hit/miss)の重みは合計約100', () => {
+  for (const row of Object.keys(REACH_DIGIT_WEIGHTS)) {
+    const total = REACH_DIGITS.reduce((sum, d) => sum + REACH_DIGIT_WEIGHTS[row][d], 0);
+    assert.ok(Math.abs(total - 100) < 1e-6, `row=${row}, total=${total}`);
+  }
+});
+
+test('REACH_DIGIT_WEIGHTS: 当選時の出現率は7が5%・3が10%(指定通り)', () => {
+  assertClose(REACH_DIGIT_WEIGHTS.hit[7], 5, 0.0001);
+  assertClose(REACH_DIGIT_WEIGHTS.hit[3], 10, 0.0001);
+});
+
+test('REACH_DIGIT_WEIGHTS: 外れのガセリーチでは7は絶対に出ない(信頼度100%)', () => {
+  assert.equal(REACH_DIGIT_WEIGHTS.miss[7], 0);
+});
+
+test('reachDigitHitRate: 7は100%、3は90%(指定通りの信頼度)', () => {
+  assert.equal(reachDigitHitRate(7), 1);
+  assertClose(reachDigitHitRate(3), 0.9, 0.0001);
+});
+
+test('reachDigitHitRate: 7と3以外の6数字は互いに信頼度が等しく、3より低い(均等割りの副作用)', () => {
+  const others = [1, 2, 4, 5, 6, 8].map(reachDigitHitRate);
+  others.forEach((r) => assertClose(r, others[0], 1e-9));
+  assert.ok(others[0] < reachDigitHitRate(3));
+});
+
+test('rollReachDigit: hit=trueでrng=0は先頭の数字(1)になる', () => {
+  assert.equal(rollReachDigit(true, () => 0), 1);
+});
+
+test('rollReachDigit: miss(ガセリーチ)でrng=0.999でも7にはならない(信頼度100%のため出現ゼロ)', () => {
+  assert.notEqual(rollReachDigit(false, () => 0.999), 7);
+});
