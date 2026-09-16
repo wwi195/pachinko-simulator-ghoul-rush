@@ -22,7 +22,7 @@ const game = {
 const HISTORY_MAX_ITEMS = 50;
 
 let rateSelectEl, modeSelectEl, speedSelectEl, startBtnEl,
-    overlayEl, overlayBoxEl, startControlsEl,
+    overlayEl, overlayBoxEl, rizeFlashOverlayEl, startControlsEl,
     totalPlaysValueEl, totalProfitValueEl, maxChainValueEl, totalBallsValueEl,
     holdsRowEl, holdIconEls, currentHoldIconEl, lcdScreenEl, lcdDigitEls, rushStatusRowEl,
     stRemainingValueEl, chainCountValueEl, rushBallsValueEl,
@@ -37,6 +37,7 @@ function cacheDomRefs() {
   startBtnEl = document.getElementById('start-btn');
   overlayEl = document.getElementById('overlay');
   overlayBoxEl = document.getElementById('overlay-box');
+  rizeFlashOverlayEl = document.getElementById('rize-flash-overlay');
   startControlsEl = document.getElementById('start-controls');
   totalPlaysValueEl = document.getElementById('total-plays-value');
   totalProfitValueEl = document.getElementById('total-profit-value');
@@ -360,6 +361,9 @@ function stopHoldFillLoop() {
     clearTimeout(holdFillTimeoutId);
     holdFillTimeoutId = null;
   }
+  // リゼ襲来のrize表示中(showRizeFlash)にRUSHが終わった場合、そのまま
+  // だと表示されっぱなしになるので、ここで強制的に隠す。
+  rizeFlashOverlayEl.hidden = true;
 }
 
 function scheduleNextHoldFillTick() {
@@ -371,11 +375,37 @@ function holdFillTick() {
     if (generateOneHold()) {
       // renderHolds()(全枠リセット)ではなく、新しく増えた枠だけを更新する
       // (他の枠のクラスを不要に触らないため)。
-      renderHoldAt(game.holds.length - 1);
-      popHoldIcon(game.holds.length - 1);
+      const newIndex = game.holds.length - 1;
+      renderHoldAt(newIndex);
+      popHoldIcon(newIndex);
+
+      // リゼ襲来モード：当たり保留がキューに生成された瞬間、rize画像を
+      // 0.7秒だけ映す。まだ保留0ではない(消化はされていない)ため、他の
+      // 保留の消化(resolveHold)はこの間も裏で進行する。止まるのは
+      // 保留補充ループ自身の次のチックだけ。
+      const newHold = game.holds[newIndex];
+      const isHit = newHold.outcome === 'hit_small' || newHold.outcome === 'hit_big';
+      if (newHold.mode === 'rize' && isHit) {
+        showRizeFlash(scheduleNextHoldFillTick);
+        return;
+      }
     }
   }
   scheduleNextHoldFillTick();
+}
+
+const RIZE_FLASH_MS = 700;
+
+// リゼ襲来モード専用：#overlay(保留消化側の演出)とは別のrizeFlashOverlayEl
+// を使う。同じ#overlayを使うと、ちょうど他の保留の当選告知が表示中の
+// タイミングと重なった場合にその内容を上書き/巻き戻してしまうため。
+function showRizeFlash(onDone) {
+  rizeFlashOverlayEl.hidden = false;
+  const delay = game.skipping ? 0 : RIZE_FLASH_MS;
+  holdFillTimeoutId = setTimeout(() => {
+    rizeFlashOverlayEl.hidden = true;
+    onDone();
+  }, delay);
 }
 
 function renderHoldAt(index) {

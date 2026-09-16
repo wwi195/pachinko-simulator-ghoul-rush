@@ -516,6 +516,30 @@ select {
   padding: 20px;
 }
 
+/* リゼ襲来：#overlay(保留消化側)とは独立したタイマーで表示されうるため、
+   同時表示時に隠れないよう#overlayより手前(z-index)に重ねる。 */
+#rize-flash-overlay {
+  position: fixed;
+  inset: 0;
+  max-width: 390px;
+  margin: 0 auto;
+  z-index: 25;
+  background: #0d0d0d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.rize-flash-img {
+  width: 100%;
+  max-width: 280px;
+  border-radius: 12px;
+  border: 3px solid #7fd4ff;
+  box-shadow: 0 0 24px rgba(127,212,255,0.6);
+  animation: fadeIn 0.2s ease;
+}
+
 .screen {
   width: 100%;
   display: flex;

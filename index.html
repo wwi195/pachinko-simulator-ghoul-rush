@@ -119,6 +119,13 @@
       <div id="overlay" hidden>
         <div id="overlay-box"></div>
       </div>
+
+      <!-- リゼ襲来モード専用：当たり保留がキューに生成された瞬間に0.7秒だけ
+           映るrize画像。#overlay(保留消化側の演出)とは別系統のタイマーで
+           動くため、同時に表示され得る(#overlayより手前に出す)。 -->
+      <div id="rize-flash-overlay" hidden>
+        <img src="画像/rize.webp" class="rize-flash-img" alt="リゼ襲来">
+      </div>
     </div>
 
     <div id="history-panel">
