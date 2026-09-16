@@ -686,20 +686,6 @@ select {
   100% { transform: translateY(0) rotate(0deg); opacity: 1; }
 }
 
-/* 月山絶叫モード：カウントダウン */
-.tsukiyama-count {
-  font-size: 64px;
-  font-weight: bold;
-  color: #ff4444;
-  text-shadow: 0 0 30px rgba(255,68,68,0.8);
-  animation: countdownPulse 0.6s ease;
-}
-@keyframes countdownPulse {
-  0%   { transform: scale(1.6); opacity: 0; }
-  60%  { transform: scale(1); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
 .rush-result-title {
   font-size: 20px;
   font-weight: bold;

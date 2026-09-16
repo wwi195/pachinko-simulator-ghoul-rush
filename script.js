@@ -813,33 +813,12 @@ function showHitAnnouncement(mode, isBig, balls, chainCount, onDone) {
     return;
   }
 
-  if (mode === 'tsukiyama') {
-    showTsukiyamaCountdown(() => {
-      renderRushStatus();
-      showOverlay(popupHtml(baseHtml));
-      game.pendingTimeoutId = setTimeout(onDone, 1200);
-    });
-    return;
-  }
-
   // default / rize（rizeは保留取得時点の虹色一発告知が主眼のため、消化時はdefaultと同じ表示）
+  // tsukiyama（月山絶叫）もリーチ中の予告ボタンが主眼のため、当選告知自体は
+  // defaultと同じ表示でよい(以前あった3・2・1カウントダウンは撤廃)。
   renderRushStatus();
   showOverlay(popupHtml(baseHtml));
   game.pendingTimeoutId = setTimeout(onDone, 1200);
-}
-
-function showTsukiyamaCountdown(onDone) {
-  let count = 3;
-  const step = () => {
-    showOverlay(popupHtml(`<div class="tsukiyama-count">${count}</div>`));
-    if (count <= 1) {
-      game.pendingTimeoutId = setTimeout(onDone, 600);
-      return;
-    }
-    count--;
-    game.pendingTimeoutId = setTimeout(step, 600);
-  };
-  step();
 }
 
 // ---- RUSH終了 ----
