@@ -131,23 +131,11 @@ function togglePause() {
 }
 
 // 一時停止中に保留の生成が止まっていた場合、再開時に補充してから
-// 消化ループを動かす。scheduleHoldConsume()は「在庫が空かどうか」を
-// 見て消化間隔を決めるため、必ずfillHoldQueue()より先に呼ぶ
-// (fillHoldQueue()は1個目を同期的に追加してしまうため、後から呼ぶと
-// 在庫0の判定ができなくなり、5倍スロー化が効かなくなる)。
-// 在庫(保留1〜4)が空 = 保留0も空の状態での再開は、保留1〜4が
-// 貯まるのを待ってから保留0を埋めるのではなく、真っ先に1個生成して
-// そのまま保留0へ投入し、変動をすぐ開始する。保留1〜4の補充は
-// その後(fillHoldQueue)で並行して貯めていく。在庫が残っている
-// 場合は、通常通り消化スケジュールと補充を行う。
+// 消化ループを動かす。fillHoldQueue()はもうどの保留も同期的には追加せず
+// (1個目もHOLD_REVEAL_INITIAL_DELAY_MS待ってから現れる)、
+// scheduleHoldConsume()もEMPTY_STOCK_WAIT_MSでその到着を待つため、
+// 在庫の有無にかかわらず同じ処理でよい。
 function resumeHoldFlow() {
-  if (game.holds.length === 0 && !game.rushGenerationDone) {
-    if (generateOneHold()) {
-      consumeNextHold();
-    }
-    fillHoldQueue();
-    return;
-  }
   scheduleHoldConsume();
   if (!game.rushGenerationDone && game.holds.length < MAX_HOLDS) {
     fillHoldQueue();
@@ -292,20 +280,26 @@ function enterRush() {
   revealHoldsOneByOne();
 }
 
-const HOLD_REVEAL_STAGGER_MS = 220;
+// 保留補充(スタート/再開するボタンを押した後の一気埋め・消化ごとの
+// 補充のどちらも)は、ST消化速度(game.speed)からは独立した固定タイミング。
+// 1個目が現れるまで1秒待ち、2個目以降は0.5秒間隔で現れる。
+const HOLD_REVEAL_INITIAL_DELAY_MS = 1000;
+const HOLD_REVEAL_INTERVAL_MS = 500;
 
 // RUSH開始時、保留を1個ずつ「ポン」と出現させながら最大4個まで貯めていく。
 // スキップ中(終了するボタン押下後)は演出を待たず即座に埋める。
-function revealHoldsOneByOne() {
-  const added = generateOneHold();
-  if (!added) {
-    scheduleHoldConsume();
-    return;
-  }
-  renderHolds();
-  popHoldIcon(game.holds.length - 1);
-  const delay = game.skipping ? 0 : HOLD_REVEAL_STAGGER_MS;
-  game.pendingTimeoutId = setTimeout(revealHoldsOneByOne, delay);
+function revealHoldsOneByOne(isFirst = true) {
+  const delay = game.skipping ? 0 : (isFirst ? HOLD_REVEAL_INITIAL_DELAY_MS : HOLD_REVEAL_INTERVAL_MS);
+  game.pendingTimeoutId = setTimeout(() => {
+    const added = generateOneHold();
+    if (!added) {
+      scheduleHoldConsume();
+      return;
+    }
+    renderHolds();
+    popHoldIcon(game.holds.length - 1);
+    revealHoldsOneByOne(false);
+  }, delay);
 }
 
 // 保留を1個だけ生成してgame.holdsに追加する。生成できた場合はtrueを返す
@@ -340,17 +334,18 @@ function generateOneHold() {
 }
 
 // 保留消化で空いた枠を、上限(MAX_HOLDS)まで補充する。1個ずつ「ポン」と
-// 出現させながら順番に埋めていく(一気に全部出さない)。一時停止からの
-// 再開直後など、在庫がまとめて空だった場合でも1個ずつ貯まる様子が
-// 見えるようにするための挙動。一時停止中は補充しない(=新しい保留は増えない)。
+// 出現させながら順番に埋めていく(一気に全部出さない)。1個目はHOLD_REVEAL_
+// INITIAL_DELAY_MS(1秒)待ってから現れ、2個目以降はHOLD_REVEAL_INTERVAL_MS
+// (0.5秒)間隔で現れる。一時停止からの再開直後など、在庫がまとめて空
+// だった場合でも同じタイミングで1個ずつ貯まる。一時停止中は補充しない
+// (=新しい保留は増えない)。
 //
 // 呼び出し時点の不足数(deficit)を最初に確定し、その数だけ足したら
 // チェーンを終える。もし「上限に達するまで無条件に足し続ける」実装に
-// すると、「最速」設定(消化間隔175ms)のようにチェーンの間隔
-// (HOLD_REVEAL_STAGGER_MS=220ms)より消化ペースが速い場合、このチェーンの
-// 継続チェックが「別の消化サイクルが新しく空けた枠」にまで反応して
-// しまい、1回の保留消化に対して保留が2個出現しているように見える
-// 不具合があった。呼び出し時点の不足数だけを面倒見て終わることで、
+// すると、「最速」設定のように消化ペースが補充間隔より速い場合、この
+// チェーンの継続チェックが「別の消化サイクルが新しく空けた枠」にまで
+// 反応してしまい、1回の保留消化に対して保留が2個出現しているように
+// 見える不具合があった。呼び出し時点の不足数だけを面倒見て終わることで、
 // 後から生じた不足は「その消化サイクル自身のfillHoldQueue呼び出し」に
 // 任せ、チェーン同士が干渉しないようにする。
 let fillHoldQueueActive = false;
@@ -360,24 +355,31 @@ function fillHoldQueue() {
   const deficit = MAX_HOLDS - game.holds.length;
   if (deficit <= 0) return;
   fillHoldQueueActive = true;
-  fillHoldQueueStep(deficit);
+  fillHoldQueueStep(deficit, true);
 }
 
-function fillHoldQueueStep(remaining) {
+function fillHoldQueueStep(remaining, isFirst) {
   if (remaining <= 0 || game.paused || game.rushGenerationDone || game.holds.length >= MAX_HOLDS) {
     fillHoldQueueActive = false;
     return;
   }
-  if (!generateOneHold()) {
-    fillHoldQueueActive = false;
-    return;
-  }
-  // renderHolds()(全枠リセット)ではなく、新しく増えた枠だけを更新する
-  // (他の枠のクラスを不要に触らないため)。
-  renderHoldAt(game.holds.length - 1);
-  popHoldIcon(game.holds.length - 1);
-  const delay = game.skipping ? 0 : HOLD_REVEAL_STAGGER_MS;
-  setTimeout(() => fillHoldQueueStep(remaining - 1), delay);
+  const delay = game.skipping ? 0 : (isFirst ? HOLD_REVEAL_INITIAL_DELAY_MS : HOLD_REVEAL_INTERVAL_MS);
+  setTimeout(() => {
+    // 待っている間に一時停止・RUSH終了・満杯になった可能性があるため再確認する。
+    if (game.paused || game.rushGenerationDone || game.holds.length >= MAX_HOLDS) {
+      fillHoldQueueActive = false;
+      return;
+    }
+    if (!generateOneHold()) {
+      fillHoldQueueActive = false;
+      return;
+    }
+    // renderHolds()(全枠リセット)ではなく、新しく増えた枠だけを更新する
+    // (他の枠のクラスを不要に触らないため)。
+    renderHoldAt(game.holds.length - 1);
+    popHoldIcon(game.holds.length - 1);
+    fillHoldQueueStep(remaining - 1, false);
+  }, delay);
 }
 
 function renderHoldAt(index) {
@@ -449,9 +451,13 @@ function renderRushStatus() {
 // 一時停止中でも、既に保留にある分の消化は止めない(止まるのは補充だけ)。
 // 保留を使い切ったとき：一時停止中、またはST消化(保留生成)が完全に
 // 終わっている場合は、消化するものがないため待機状態にする。
-// それ以外(再開直後などで保留0のみ・在庫が空)の場合は、消化間隔を
-// 通常の5倍に伸ばし、fillHoldQueueが保留1〜4を1個ずつ貯める時間を作る。
-const EMPTY_STOCK_SLOWDOWN = 3;
+// それ以外(再開直後などで保留0のみ・在庫が空)の場合は、fillHoldQueueが
+// 保留0を実際に生成し終えるまで(HOLD_REVEAL_INITIAL_DELAY_MS)、それより
+// 前にconsumeNextHoldが空の在庫を掴んでしまわないよう待つ。ST消化速度
+// (game.speed)の値にかかわらず、この待ち時間は保留補充のタイミングから
+// 独立した固定値にする(速度設定によっては補充が追いつかず空振りする
+// ことがあるため)。
+const EMPTY_STOCK_WAIT_MS = HOLD_REVEAL_INITIAL_DELAY_MS + 200;
 
 // 保留0の外れフラッシュアウト(#current-hold-icon.hold-flash-out、
 // style.cssのcurrentHoldFlashOutと同じ0.55秒)の再生が終わるまでの
@@ -468,7 +474,7 @@ function scheduleHoldConsume(minDelayMs = 0) {
     return;
   }
   const baseInterval = rushSpeedIntervalMs(game.speed);
-  const interval = game.holds.length === 0 ? baseInterval * EMPTY_STOCK_SLOWDOWN : baseInterval;
+  const interval = game.holds.length === 0 ? EMPTY_STOCK_WAIT_MS : baseInterval;
   const delay = game.skipping ? 0 : Math.max(interval, minDelayMs);
   game.pendingTimeoutId = setTimeout(consumeNextHold, delay);
 }
