@@ -127,13 +127,23 @@ function bindEvents() {
   });
   pauseBtnEl.addEventListener('click', togglePause);
   endRushBtnEl.addEventListener('click', endRushNow);
-  // 月山絶叫モードの予告ボタン：一度押したら連打できないよう無効化し、
-  // 保留色と同じ抽選(rollHoldColor)で色を1回だけ決めて光らせる。
+  // 月山絶叫モードの予告ボタン：一度押したら連打できないよう無効化する。
+  // 当選(isHit)なら確定でレインボー+文言「僕のだぞ！」に変える(抽選に
+  // すると保留色と同じ重み(無色が40%)でnoneが出て「色が変わらない」
+  // ように見えてしまうため、当選時は必ず視覚的な変化を保証する)。
+  // 外れ(ガセリーチ)のときだけ、保留色と同じ抽選(rollHoldColor)で
+  // 色を1回だけ決めて光らせる(この場合は無色になることもある)。
   tsukiyamaBtnEl.addEventListener('click', () => {
     if (tsukiyamaBtnEl.disabled || tsukiyamaBtnOutcome === null) return;
     tsukiyamaBtnEl.disabled = true;
-    const color = rollHoldColor(tsukiyamaBtnOutcome);
-    tsukiyamaBtnEl.classList.add(`tsukiyama-btn-${color}`);
+    const isHit = tsukiyamaBtnOutcome === 'hit_small' || tsukiyamaBtnOutcome === 'hit_big';
+    if (isHit) {
+      tsukiyamaBtnEl.classList.add('tsukiyama-btn-rainbow');
+      tsukiyamaBtnEl.textContent = '僕のだぞ！';
+    } else {
+      const color = rollHoldColor(tsukiyamaBtnOutcome);
+      tsukiyamaBtnEl.classList.add(`tsukiyama-btn-${color}`);
+    }
   });
   introTabBtnEl.addEventListener('click', () => {
     introTextEl.hidden = !introTextEl.hidden;
@@ -560,9 +570,12 @@ function consumeNextHold() {
 // ため)。
 let tsukiyamaBtnOutcome = null;
 
+const TSUKIYAMA_BTN_DEFAULT_LABEL = '絶叫ボタン';
+
 function showTsukiyamaButton(outcome) {
   tsukiyamaBtnOutcome = outcome;
   tsukiyamaBtnEl.className = 'tsukiyama-btn';
+  tsukiyamaBtnEl.textContent = TSUKIYAMA_BTN_DEFAULT_LABEL;
   tsukiyamaBtnEl.disabled = false;
   tsukiyamaBtnRowEl.hidden = false;
 }
@@ -570,6 +583,7 @@ function showTsukiyamaButton(outcome) {
 function hideTsukiyamaButton() {
   tsukiyamaBtnRowEl.hidden = true;
   tsukiyamaBtnEl.className = 'tsukiyama-btn';
+  tsukiyamaBtnEl.textContent = TSUKIYAMA_BTN_DEFAULT_LABEL;
   tsukiyamaBtnEl.disabled = false;
   tsukiyamaBtnOutcome = null;
 }
