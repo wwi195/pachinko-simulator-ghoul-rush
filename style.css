@@ -342,6 +342,11 @@ body {
   border-top: 1px solid #1e1e1e;
 }
 
+.hrow-mode-row {
+  justify-content: center;
+  padding: 6px 12px 3px;
+}
+
 .hrow-speed-row {
   justify-content: center;
   padding: 6px 12px 3px;

@@ -27,7 +27,7 @@ let rateSelectEl, modeSelectEl, speedSelectEl, startBtnEl,
     holdsRowEl, holdIconEls, currentHoldIconEl, lcdScreenEl, lcdDigitEls, rushStatusRowEl,
     stRemainingValueEl, chainCountValueEl, rushBallsValueEl,
     rushMoneyRowEl, rushToushiValueEl, rushProfitValueEl,
-    pauseRowEl, pauseBtnEl, endRushBtnEl, rushSpeedBtnsEl, holdLegendBodyEl,
+    pauseRowEl, pauseBtnEl, endRushBtnEl, rushSpeedBtnsEl, rushModeBtnsEl, holdLegendBodyEl,
     introTabBtnEl, introTextEl, historyListEl;
 
 function cacheDomRefs() {
@@ -58,6 +58,7 @@ function cacheDomRefs() {
   pauseBtnEl = document.getElementById('pause-btn');
   endRushBtnEl = document.getElementById('end-rush-btn');
   rushSpeedBtnsEl = document.getElementById('rush-speed-btns');
+  rushModeBtnsEl = document.getElementById('rush-mode-btns');
   holdLegendBodyEl = document.getElementById('hold-legend-body');
   introTabBtnEl = document.getElementById('intro-tab-btn');
   introTextEl = document.getElementById('intro-text');
@@ -86,6 +87,9 @@ function populateSelects() {
   rushSpeedBtnsEl.innerHTML = RUSH_SPEED_OPTIONS.map(
     (s) => `<button type="button" class="speed-btn" data-speed="${s.id}">${s.label.split('（')[0]}</button>`
   ).join('');
+  rushModeBtnsEl.innerHTML = RUSH_MODE_OPTIONS.map(
+    (m) => `<button type="button" class="speed-btn" data-mode="${m.id}">${m.label}</button>`
+  ).join('');
   holdLegendBodyEl.innerHTML = HOLD_COLORS.map((color) => `
     <div class="hold-legend-row">
       <span class="hold-icon hold-${color}"></span>
@@ -107,6 +111,16 @@ function bindEvents() {
     speedSelectEl.value = game.speed;
     renderRushSpeedButtons();
   });
+  // RUSH中に演出モードを切り替えるボタン。この時点で既に生成済みの
+  // 保留はhold.modeに古いモードを保持しているので、演出には影響しない
+  // (generateOneHoldのコメント参照)。次に生成される保留から新モードになる。
+  rushModeBtnsEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('.speed-btn');
+    if (!btn) return;
+    game.mode = btn.dataset.mode;
+    modeSelectEl.value = game.mode;
+    renderRushModeButtons();
+  });
   pauseBtnEl.addEventListener('click', togglePause);
   endRushBtnEl.addEventListener('click', endRushNow);
   introTabBtnEl.addEventListener('click', () => {
@@ -118,6 +132,12 @@ function bindEvents() {
 function renderRushSpeedButtons() {
   Array.from(rushSpeedBtnsEl.querySelectorAll('.speed-btn')).forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.speed === game.speed);
+  });
+}
+
+function renderRushModeButtons() {
+  Array.from(rushModeBtnsEl.querySelectorAll('.speed-btn')).forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.mode === game.mode);
   });
 }
 
@@ -275,6 +295,7 @@ function enterRush() {
   pauseBtnEl.disabled = false;
   endRushBtnEl.disabled = false;
   renderRushSpeedButtons();
+  renderRushModeButtons();
   renderRushStatus();
   renderHolds();
   renderCurrentHold(null);
@@ -286,14 +307,19 @@ function enterRush() {
 // 保留を1個だけ生成してgame.holdsに追加する。生成できた場合はtrueを返す
 // (ST消化が終わっているか、既に保留が上限なら何もせずfalseを返す)。
 // 当落(outcome)・色(color)だけでなく、リーチするか(isReach)・テンパイ数字
-// (reachDigit)もこの時点で全て確定させる。保留が先頭(保留0)に来て消化が
-// 始まった時点では、もう何も抽選しない(結果を再生するだけ)。
+// (reachDigit)・演出モード(mode)もこの時点で全て確定させる。保留が先頭
+// (保留0)に来て消化が始まった時点では、もう何も抽選しない(結果を
+// そのまま再生するだけ)。演出モードをgame.modeから保留自身にコピーして
+// 持たせるのは、RUSH中にモードを変更しても「変更後に生成された保留」
+// だけが新モードの演出対象になるようにするため(消化時にgame.modeを
+// 直接見てしまうと、既に生成済みの保留の演出まで後から変わってしまう)。
 function generateOneHold() {
   if (game.rushGenerationDone || game.holds.length >= MAX_HOLDS) return false;
+  const mode = game.mode;
   const { rushState, outcome } = applyRushSpin(game.rush);
   game.rush = rushState;
   let color = rollHoldColor(outcome);
-  if (game.mode === 'rize' && (outcome === 'hit_small' || outcome === 'hit_big')) {
+  if (mode === 'rize' && (outcome === 'hit_small' || outcome === 'hit_big')) {
     color = 'rainbow';
   }
 
@@ -307,7 +333,7 @@ function generateOneHold() {
   // (rollReachDigit、7・3は信頼度が高い代わりに出現率を下げてある)。
   const reachDigit = isReach ? rollReachDigit(isHit) : null;
 
-  game.holds.push({ outcome, color, isReach, reachDigit });
+  game.holds.push({ outcome, color, isReach, reachDigit, mode });
   if (outcome === 'st_end') {
     game.rushGenerationDone = true;
   }
@@ -470,11 +496,13 @@ function consumeNextHold() {
   slideHoldIconsLeft();
   renderCurrentHold(hold);
 
-  // 突撃モード：当たり保留が保留0になった(=変動開始の)瞬間、一瞬(0.5秒)
+  // 突撃モード：当たり保留が保留0になった(=変動開始の)瞬間、一瞬(1秒)
   // 先バレ画像を差し込む。この間もresolveHold自体は遅延しているだけで、
   // 先バレが終わり次第、通常通りリーチ→あたりの演出(resolveHold)に進む。
+  // hold.mode(生成時点のモード)で判定する。game.modeを直接見ると、
+  // 生成後にモードを変更された保留にまで新モードの演出が適用されてしまう。
   const isHit = hold.outcome === 'hit_small' || hold.outcome === 'hit_big';
-  if (game.mode === 'tokigeki' && isHit) {
+  if (hold.mode === 'tokigeki' && isHit) {
     showTokigekiSenbare(() => resolveHold(hold));
     return;
   }
@@ -483,9 +511,9 @@ function consumeNextHold() {
   game.pendingTimeoutId = setTimeout(() => resolveHold(hold), revealDelay);
 }
 
-const TOKIGEKI_SENBARE_MS = 500;
+const TOKIGEKI_SENBARE_MS = 1000;
 
-// 突撃モード専用：先バレ画像+「手落下！」を0.5秒だけ映してから消す。
+// 突撃モード専用：先バレ画像+「手落下！」を1秒だけ映してから消す。
 function showTokigekiSenbare(onDone) {
   showOverlay(popupHtml(`
     <img src="画像/グール先バレ.webp" class="senbare-img" alt="先バレ">
@@ -525,7 +553,7 @@ function resolveHold(hold) {
     game.revealedChain += 1;
     game.revealedStRemaining = game.stCountConst;
     vanishLcdDigits(() => {
-      showHitAnnouncement(isBig, balls, game.revealedChain, () => {
+      showHitAnnouncement(hold.mode, isBig, balls, game.revealedChain, () => {
         hideOverlay();
         scheduleHoldConsume();
       });
@@ -691,7 +719,7 @@ function runLcdSequence(isHit, isReach, reachDigit, onDone) {
 
 // ---- 演出モード別の当選告知 ----
 
-function showHitAnnouncement(isBig, balls, chainCount, onDone) {
+function showHitAnnouncement(mode, isBig, balls, chainCount, onDone) {
   if (game.skipping) {
     renderRushStatus();
     game.pendingTimeoutId = setTimeout(onDone, 0);
@@ -705,14 +733,14 @@ function showHitAnnouncement(isBig, balls, chainCount, onDone) {
     <div class="chain-label">＋${balls}球 (${chainCount}連)</div>
   `;
 
-  if (game.mode === 'tokigeki') {
+  if (mode === 'tokigeki') {
     renderRushStatus();
     showOverlay(popupHtml(`<div class="tokigeki-cutin">突撃！</div>${baseHtml}`));
     game.pendingTimeoutId = setTimeout(onDone, 1800);
     return;
   }
 
-  if (game.mode === 'tsukiyama') {
+  if (mode === 'tsukiyama') {
     showTsukiyamaCountdown(() => {
       renderRushStatus();
       showOverlay(popupHtml(baseHtml));
