@@ -20,6 +20,7 @@ npm test
 
 ## 設計書・実装計画
 
+- `docs/blog.md`（開発の振り返りブログ記事）
 - `docs/simulator-design.md`（仕組みの全体解説。ブログ記事などの題材用）
 - `docs/superpowers/specs/2026-09-03-ghoul-rush-format-design.md`
 - `docs/superpowers/plans/2026-09-03-ghoul-rush-format.md`
