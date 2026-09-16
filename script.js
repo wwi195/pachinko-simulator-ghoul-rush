@@ -310,6 +310,9 @@ function revealHoldsOneByOne() {
 
 // 保留を1個だけ生成してgame.holdsに追加する。生成できた場合はtrueを返す
 // (ST消化が終わっているか、既に保留が上限なら何もせずfalseを返す)。
+// 当落(outcome)・色(color)だけでなく、リーチするか(isReach)・テンパイ数字
+// (reachDigit)もこの時点で全て確定させる。保留が先頭(保留0)に来て消化が
+// 始まった時点では、もう何も抽選しない(結果を再生するだけ)。
 function generateOneHold() {
   if (game.rushGenerationDone || game.holds.length >= MAX_HOLDS) return false;
   const { rushState, outcome } = applyRushSpin(game.rush);
@@ -318,7 +321,15 @@ function generateOneHold() {
   if (game.mode === 'rize' && (outcome === 'hit_small' || outcome === 'hit_big')) {
     color = 'rainbow';
   }
-  game.holds.push({ outcome, color });
+
+  const isHit = outcome === 'hit_small' || outcome === 'hit_big';
+  // ガセリーチ(はずれリーチ)判定：保留の色が点滅以上(無色以外)なら必ず
+  // リーチする。無色の場合は、大当たり確率P_RUSHと同じ確率で抽選する。
+  const isFakeReach = !isHit && (color !== 'none' || Math.random() < P_RUSH);
+  const isReach = isHit || isFakeReach;
+  const reachDigit = isReach ? randomDigit() : null;
+
+  game.holds.push({ outcome, color, isReach, reachDigit });
   if (outcome === 'st_end') {
     game.rushGenerationDone = true;
   }
@@ -486,12 +497,9 @@ function resolveHold(hold) {
   }
 
   const isHit = hold.outcome === 'hit_small' || hold.outcome === 'hit_big';
-  // 外れの場合のガセリーチ(はずれリーチ)判定：当たりと同じ
-  // 「はさみテンパイ」を見せてから、テンパイ数字+1(8の場合は1)で
-  // 止まって外れる。保留の色が点滅以上(無色以外)なら必ずリーチする。
-  // 無色の場合は、大当たり確率P_RUSHと同じ確率で抽選する。
-  const isFakeReach = !isHit && (hold.color !== 'none' || Math.random() < P_RUSH);
-  runLcdSequence(isHit, isFakeReach, () => {
+  // isReach/reachDigitは保留生成時(generateOneHold)に確定済み。ここでは
+  // 何も抽選せず、その結果をそのまま再生する。
+  runLcdSequence(isHit, hold.isReach, hold.reachDigit, () => {
     if (!isHit) {
       game.revealedStRemaining -= 1;
       renderRushStatus();
@@ -524,10 +532,14 @@ function resolveHold(hold) {
 // 回り続けたまま約3秒の緊張を作ってから3桁を揃え、0.5秒待って
 // onDoneへ進む(onDone側で3桁を一瞬消してから当選告知の画像に
 // 引き継ぐ、vanishLcdDigits参照)。外れの場合：通常は短い回転の
-// 後、揃わずに止まってすぐonDoneへ進むが、一部(確率P_RUSH)は当たりと
-// 同じはさみテンパイを見せてから、テンパイ数字+1(8なら1)で止まる
-// ガセリーチになる(isFakeReach、nearMissDigit参照)。数字自体は演出用
-// の飾りで、当落は既にhold.outcomeで決まっている。スキップ中は
+// 後、揃わずに止まってすぐonDoneへ進むが、一部は当たりと同じ
+// はさみテンパイを見せてから、テンパイ数字+1(8なら1)で止まる
+// ガセリーチになる(isReach、nearMissDigit参照)。リーチするかどうか・
+// テンパイ数字(reachDigit)は保留生成時(generateOneHold)に確定済みで、
+// ここではその結果を再生するだけ(何も抽選しない)。スピン中に見える
+// パラパラ変化(startLcdSpin)と、リーチなし外れの一瞬だけ映る3桁
+// (randomNonMatchingTriple)は結果に意味を持たない演出ノイズなので、
+// これらだけは引き続きこの場で都度ランダムに生成する。スキップ中は
 // 回転を見せず、結果の数字だけ即座に表示してonDoneへ進む。
 const LCD_SPIN_TICK_MS = 70;
 const LCD_REACH_START_DELAY_MS = 280;
@@ -605,22 +617,23 @@ function vanishLcdDigits(onDone) {
   }, delay);
 }
 
-// isHit: 当たりなら3桁を揃える。isFakeReach: 外れだが当たりと同じ
+// isHit: 当たりなら3桁を揃える。isReach: 外れだが当たりと同じ
 // リーチ演出を見せてから、テンパイ数字+1で外れる(ガセリーチ)。
-// どちらもfalseなら、リーチなしの短い回転で外れる。
-function runLcdSequence(isHit, isFakeReach, onDone) {
+// どちらもfalseなら、リーチなしの短い回転で外れる。reachDigitは
+// isReach時のテンパイ数字(generateOneHoldで確定済み、isReach=falseなら
+// null)。
+function runLcdSequence(isHit, isReach, reachDigit, onDone) {
   lcdScreenEl.classList.remove('lcd-reach', 'lcd-aligned');
-  const showReach = isHit || isFakeReach;
 
   if (game.skipping) {
     stopLcdSpin();
     if (isHit) {
-      const d = randomDigit();
+      const d = reachDigit;
       setLcdDigit(0, d);
       setLcdDigit(1, d);
       setLcdDigit(2, d);
-    } else if (isFakeReach) {
-      const d = randomDigit();
+    } else if (isReach) {
+      const d = reachDigit;
       setLcdDigit(0, d);
       setLcdDigit(1, nearMissDigit(d));
       setLcdDigit(2, d);
@@ -633,7 +646,7 @@ function runLcdSequence(isHit, isFakeReach, onDone) {
     return;
   }
 
-  if (!showReach) {
+  if (!isReach) {
     startLcdSpin([0, 1, 2]);
     game.pendingTimeoutId = setTimeout(() => {
       stopLcdSpin();
@@ -648,7 +661,7 @@ function runLcdSequence(isHit, isFakeReach, onDone) {
   // 挟まれた真ん中の桁が回り続ける。
   startLcdSpin([0, 1, 2]);
   game.pendingTimeoutId = setTimeout(() => {
-    const d = randomDigit();
+    const d = reachDigit;
     setLcdDigit(0, d);
     setLcdDigit(2, d);
     lcdScreenEl.classList.add('lcd-reach');
