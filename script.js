@@ -315,7 +315,6 @@ function revealHoldsOneByOne() {
 // 始まった時点では、もう何も抽選しない(結果を再生するだけ)。
 function generateOneHold() {
   if (game.rushGenerationDone || game.holds.length >= MAX_HOLDS) return false;
-  const rushBeforeThisSpin = game.rush;
   const { rushState, outcome } = applyRushSpin(game.rush);
   game.rush = rushState;
   let color = rollHoldColor(outcome);
@@ -328,22 +327,10 @@ function generateOneHold() {
   // リーチする。無色の場合は、大当たり確率P_RUSHと同じ確率で抽選する。
   const isFakeReach = !isHit && (color !== 'none' || Math.random() < P_RUSH);
   const isReach = isHit || isFakeReach;
-  const reachDigit = isReach ? rollReachDigit() : null;
+  const reachDigit = isReach ? randomDigit() : null;
 
-  // ラッキー7：外れがテンパイ数字7になった場合、確率抽選なしで必ず
-  // 当たりに昇格する。この保留はまだ生成した直後(後続の保留はまだ
-  // 存在しない)ため、RUSH状態(ST・連チャン)を昇格後の状態に置き換える
-  // だけでよく、既存の保留キューを作り直す必要はない。色は外れ時点の
-  // ままにする(サプライズ演出として、色による示唆はあえて変えない)。
-  let finalOutcome = outcome;
-  if (outcome === 'miss' && isReach && reachDigit === LUCKY_REACH_DIGIT) {
-    const forced = forceRushHit(rushBeforeThisSpin);
-    game.rush = forced.rushState;
-    finalOutcome = forced.outcome;
-  }
-
-  game.holds.push({ outcome: finalOutcome, color, isReach, reachDigit });
-  if (finalOutcome === 'st_end') {
+  game.holds.push({ outcome, color, isReach, reachDigit });
+  if (outcome === 'st_end') {
     game.rushGenerationDone = true;
   }
   return true;
