@@ -333,6 +333,14 @@ body {
 .esup-block { text-align: center; min-width: 60px; }
 .esup-label { font-size: 10px; color: #666; }
 .esup-value { font-size: 18px; font-weight: bold; color: #f0c040; }
+.esup-value.green { color: #44cc88; }
+.esup-value.red   { color: #cc6666; }
+
+.hrow-rush-money {
+  justify-content: space-around;
+  padding: 4px 12px 6px;
+  border-top: 1px solid #1e1e1e;
+}
 
 .hrow-speed-row {
   justify-content: center;

@@ -26,6 +26,7 @@ let rateSelectEl, modeSelectEl, speedSelectEl, startBtnEl,
     totalPlaysValueEl, totalProfitValueEl, maxChainValueEl, totalBallsValueEl,
     holdsRowEl, holdIconEls, currentHoldIconEl, lcdScreenEl, lcdDigitEls, rushStatusRowEl,
     stRemainingValueEl, chainCountValueEl, rushBallsValueEl,
+    rushMoneyRowEl, rushToushiValueEl, rushProfitValueEl,
     pauseRowEl, pauseBtnEl, endRushBtnEl, rushSpeedBtnsEl, holdLegendBodyEl,
     introTabBtnEl, introTextEl, historyListEl;
 
@@ -50,6 +51,9 @@ function cacheDomRefs() {
   stRemainingValueEl = document.getElementById('st-remaining-value');
   chainCountValueEl = document.getElementById('chain-count-value');
   rushBallsValueEl = document.getElementById('rush-balls-value');
+  rushMoneyRowEl = document.getElementById('rush-money-row');
+  rushToushiValueEl = document.getElementById('rush-toushi-value');
+  rushProfitValueEl = document.getElementById('rush-profit-value');
   pauseRowEl = document.getElementById('pause-row');
   pauseBtnEl = document.getElementById('pause-btn');
   endRushBtnEl = document.getElementById('end-rush-btn');
@@ -263,6 +267,8 @@ function enterRush() {
   game.skipping = false;
   holdsRowEl.hidden = false;
   rushStatusRowEl.hidden = false;
+  rushMoneyRowEl.hidden = false;
+  rushToushiValueEl.textContent = `${game.investment.toushi.toLocaleString()}円`;
   pauseRowEl.hidden = false;
   pauseBtnEl.textContent = '一時停止';
   pauseBtnEl.classList.remove('active');
@@ -410,6 +416,12 @@ function renderRushStatus() {
   stRemainingValueEl.textContent = game.revealedStRemaining;
   chainCountValueEl.textContent = game.revealedChain;
   rushBallsValueEl.textContent = game.rushBalls.toLocaleString();
+
+  const profit = ballsToYen(game.rushBalls) - game.investment.toushi;
+  rushProfitValueEl.textContent = `${profit >= 0 ? '+' : ''}${profit.toLocaleString()}円`;
+  rushProfitValueEl.classList.remove('green', 'red');
+  if (profit > 0) rushProfitValueEl.classList.add('green');
+  else if (profit < 0) rushProfitValueEl.classList.add('red');
 }
 
 // 一時停止中でも、既に保留にある分の消化は止めない(止まるのは補充だけ)。
@@ -724,6 +736,7 @@ function finishRush() {
   game.skipping = false;
   holdsRowEl.hidden = true;
   rushStatusRowEl.hidden = true;
+  rushMoneyRowEl.hidden = true;
   pauseRowEl.hidden = true;
 
   showOverlay(popupHtml(`
