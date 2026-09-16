@@ -470,8 +470,32 @@ function consumeNextHold() {
   slideHoldIconsLeft();
   renderCurrentHold(hold);
 
+  // 突撃モード：当たり保留が保留0になった(=変動開始の)瞬間、一瞬(0.5秒)
+  // 先バレ画像を差し込む。この間もresolveHold自体は遅延しているだけで、
+  // 先バレが終わり次第、通常通りリーチ→あたりの演出(resolveHold)に進む。
+  const isHit = hold.outcome === 'hit_small' || hold.outcome === 'hit_big';
+  if (game.mode === 'tokigeki' && isHit) {
+    showTokigekiSenbare(() => resolveHold(hold));
+    return;
+  }
+
   const revealDelay = game.skipping ? 0 : HOLD_ARRIVAL_MS;
   game.pendingTimeoutId = setTimeout(() => resolveHold(hold), revealDelay);
+}
+
+const TOKIGEKI_SENBARE_MS = 500;
+
+// 突撃モード専用：先バレ画像+「手落下！」を0.5秒だけ映してから消す。
+function showTokigekiSenbare(onDone) {
+  showOverlay(popupHtml(`
+    <img src="画像/グール先バレ.webp" class="senbare-img" alt="先バレ">
+    <div class="senbare-comment">手落下！</div>
+  `));
+  const delay = game.skipping ? 0 : TOKIGEKI_SENBARE_MS;
+  game.pendingTimeoutId = setTimeout(() => {
+    hideOverlay();
+    onDone();
+  }, delay);
 }
 
 function resolveHold(hold) {

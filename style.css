@@ -587,6 +587,27 @@ select {
   letter-spacing: 1px;
 }
 
+/* 突撃モード：変動開始時、当たり保留が保留0になった瞬間に一瞬映る先バレ */
+.senbare-img {
+  width: 100%;
+  max-width: 260px;
+  border-radius: 12px;
+  border: 3px solid #ff6666;
+  box-shadow: 0 0 24px rgba(255,0,0,0.6);
+}
+
+.senbare-comment {
+  font-size: 26px;
+  font-weight: bold;
+  color: #fff;
+  background: linear-gradient(135deg, #cc0000, #660000);
+  padding: 8px 22px;
+  border-radius: 8px;
+  border: 3px solid #ff6666;
+  box-shadow: 0 0 24px rgba(255,0,0,0.7);
+  letter-spacing: 2px;
+}
+
 /* 突撃モード：カットインが上から落下 */
 .tokigeki-cutin {
   font-size: 30px;
