@@ -185,16 +185,16 @@ test('MAX_HOLDS は4', () => {
 test('RUSH_SPEED_OPTIONS は通常/速い/最速の3段階、デフォルトは通常(1400ms)', () => {
   assert.deepEqual(RUSH_SPEED_OPTIONS, [
     { id: 'normal',  label: '通常（実機と同様）', intervalMs: 1400 },
-    { id: 'fast',    label: '速い',             intervalMs: 350 },
-    { id: 'fastest', label: '最速',             intervalMs: 175 },
+    { id: 'fast',    label: '速い',             intervalMs: 175 },
+    { id: 'fastest', label: '最速',             intervalMs: 87.5 },
   ]);
   assert.equal(DEFAULT_RUSH_SPEED, 'normal');
 });
 
-test('rushSpeedIntervalMs: 各speed idに対応する間隔(ms)を返す', () => {
+test('rushSpeedIntervalMs: 各speed idに対応する間隔(ms)を返す(速い=旧最速と同じ175ms、最速はその倍速の87.5ms)', () => {
   assert.equal(rushSpeedIntervalMs('normal'), 1400);
-  assert.equal(rushSpeedIntervalMs('fast'), 350);
-  assert.equal(rushSpeedIntervalMs('fastest'), 175);
+  assert.equal(rushSpeedIntervalMs('fast'), 175);
+  assert.equal(rushSpeedIntervalMs('fastest'), 87.5);
 });
 
 test('rushSpeedIntervalMs: 不明なidはデフォルト(通常)にフォールバックする', () => {
