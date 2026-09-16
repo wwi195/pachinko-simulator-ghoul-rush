@@ -5,7 +5,7 @@
 // 識別子としてのみ参照できる)。そのため、ブラウザ分岐では両方を明示的にオブジェクトへ集約する。
 const _logic = typeof require !== 'undefined'
   ? require('./logic.js')
-  : { calcSpinCost, spinNormal, rollChargeLt, rollZugarLtChallenge, DEFAULT_ENZOKU_CONFIDENCE, P_RUSH, P_RUSH_BIG };
+  : { calcSpinCost, spinNormal, rollChargeLt, rollZugarLtChallenge, DEFAULT_ENZOKU_CONFIDENCE, P_RUSH, P_RUSH_BIG, applyRushSpin };
 
 const YEN_PER_BALL = 4;
 const BALLS_PER_1000YEN = 250;
@@ -216,6 +216,43 @@ function rushHitBalls(outcome) {
   return RUSH_HIT_BALLS[outcome];
 }
 
+// 「ラッキー7」：テンパイ数字が7になったら、外れだったはずの保留も
+// 確率抽選なしで必ず当たりに昇格する(script.js側で判定・変換する)。
+// 7はレア数字として扱うため、出現率(LUCKY_REACH_DIGIT_RATE)は低めに
+// している(お楽しみ用の初期値。後で調整可能)。
+const LUCKY_REACH_DIGIT = 7;
+const LUCKY_REACH_DIGIT_RATE = 0.05;
+const NON_LUCKY_REACH_DIGITS = [1, 2, 3, 4, 5, 6, 8];
+
+// リーチ(はさみテンパイ)のテンパイ数字を決める。LUCKY_REACH_DIGIT_RATEの
+// 確率でLUCKY_REACH_DIGIT(7)になり、残りは7を除く1〜8から均等に選ばれる。
+function rollReachDigit(rng = Math.random) {
+  if (rng() < LUCKY_REACH_DIGIT_RATE) return LUCKY_REACH_DIGIT;
+  const idx = Math.floor(rng() * NON_LUCKY_REACH_DIGITS.length);
+  return NON_LUCKY_REACH_DIGITS[Math.min(idx, NON_LUCKY_REACH_DIGITS.length - 1)];
+}
+
+// applyRushSpin(logic.js、無改造)を「必ず当たる」乱数で強制的に呼び出す。
+// ラッキー7による昇格をRUSH本体の状態(ST残数・連チャン数)に正しく
+// 反映するために使う。当たりサイズ(小/大)は通常の当選と同じ抽選(2回目の
+// 乱数呼び出し)に委ねるため、1回目の呼び出しだけを一時的に差し替える。
+function forceRushHit(rushState) {
+  const original = Math.random;
+  let firstCall = true;
+  Math.random = () => {
+    if (firstCall) {
+      firstCall = false;
+      return 0; // spinRush(): 0 < P_RUSH は常にtrue → hit
+    }
+    return original();
+  };
+  try {
+    return _logic.applyRushSpin(rushState);
+  } finally {
+    Math.random = original;
+  }
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     YEN_PER_BALL,
@@ -235,5 +272,9 @@ if (typeof module !== 'undefined' && module.exports) {
     rushSpeedIntervalMs,
     RUSH_HIT_BALLS,
     rushHitBalls,
+    LUCKY_REACH_DIGIT,
+    LUCKY_REACH_DIGIT_RATE,
+    rollReachDigit,
+    forceRushHit,
   };
 }
