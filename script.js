@@ -187,13 +187,13 @@ function resumeHoldFlow() {
 
 // 「終了する」：以後の保留消化を演出待ちなしで即座に進め、RUSH終了(st_end)まで自動で消化しきる。
 // 既に表示中の演出はそのまま最後まで見せ、次の一歩から即時消化に切り替わる。
+// オーバーレイで隠さず、盤面(LCD・保留・連荘数)が高速で動く様子をそのまま見せる。
 function endRushNow() {
   if (game.skipping) return;
   game.skipping = true;
   game.paused = false;
   pauseBtnEl.disabled = true;
   endRushBtnEl.disabled = true;
-  showOverlay(popupHtml('<div class="result-main charge">スキップ中…</div>'));
   if (game.pendingTimeoutId === null) {
     resumeHoldFlow();
   }
@@ -542,6 +542,17 @@ const HOLD_ARRIVAL_MS = 210;
 // 保留が保留4に追加されるのは、これとは別の「追加の仕組み」
 // (holdFillTick、消化とは独立したタイミングで動く)。
 function consumeNextHold() {
+  // スキップ中は保留補充ループ(holdFillTick)と消化ループの両方が0ms間隔で
+  // 走るため、保留が一瞬0個になった直後にこちらが先に呼ばれることがある。
+  // 通常時はEMPTY_STOCK_WAIT_MSがこの空振りを防ぐが、スキップ中はその
+  // 待ち時間ごと0msにしているため、ここで保留0個を弾いて次のタイミング
+  // に委ねる(弾かないとgame.holds.shift()がundefinedを返し、直後の
+  // hold.outcome参照で例外になって消化ループが止まってしまう)。
+  if (game.holds.length === 0) {
+    scheduleHoldConsume();
+    return;
+  }
+
   const hold = game.holds.shift();
   renderHolds();
   slideHoldIconsLeft();
