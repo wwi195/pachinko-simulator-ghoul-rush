@@ -198,12 +198,20 @@ const DEFAULT_RUSH_MODE = 'default';
 
 const MAX_HOLDS = 4;
 
+// speedFactor：通常を1としたST消化の速さ倍率（速い=2倍、最速=3倍）。
+// 保留間隔(intervalMs)だけでなく、保留到着・液晶変動・保留補充などの
+// 1回転あたりの演出時間もすべてこの倍率で割って短縮する。
 const RUSH_SPEED_OPTIONS = [
-  { id: 'normal',  label: '通常（実機と同様）', intervalMs: 1400 },
-  { id: 'fast',    label: '速い',             intervalMs: 175 },
-  { id: 'fastest', label: '最速',             intervalMs: 43.75 },
+  { id: 'normal',  label: '通常（実機と同様）', intervalMs: 1400,     speedFactor: 1 },
+  { id: 'fast',    label: '速い',             intervalMs: 1400 / 2, speedFactor: 2 },
+  { id: 'fastest', label: '最速',             intervalMs: 1400 / 3, speedFactor: 3 },
 ];
 const DEFAULT_RUSH_SPEED = 'normal';
+
+function rushSpeedFactor(speedId) {
+  const option = RUSH_SPEED_OPTIONS.find((o) => o.id === speedId);
+  return option ? option.speedFactor : 1;
+}
 
 function rushSpeedIntervalMs(speedId) {
   const option = RUSH_SPEED_OPTIONS.find((o) => o.id === speedId);
@@ -313,6 +321,7 @@ if (typeof module !== 'undefined' && module.exports) {
     RUSH_SPEED_OPTIONS,
     DEFAULT_RUSH_SPEED,
     rushSpeedIntervalMs,
+    rushSpeedFactor,
     RUSH_HIT_BALLS,
     rushHitBalls,
     REACH_DIGITS,

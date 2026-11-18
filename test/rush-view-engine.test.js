@@ -182,19 +182,19 @@ test('MAX_HOLDS は4', () => {
   assert.equal(MAX_HOLDS, 4);
 });
 
-test('RUSH_SPEED_OPTIONS は通常/速い/最速の3段階、デフォルトは通常(1400ms)', () => {
+test('RUSH_SPEED_OPTIONS は通常/速い/最速の3段階(速さ1:2:3)、デフォルトは通常(1400ms)', () => {
   assert.deepEqual(RUSH_SPEED_OPTIONS, [
-    { id: 'normal',  label: '通常（実機と同様）', intervalMs: 1400 },
-    { id: 'fast',    label: '速い',             intervalMs: 175 },
-    { id: 'fastest', label: '最速',             intervalMs: 43.75 },
+    { id: 'normal',  label: '通常（実機と同様）', intervalMs: 1400,     speedFactor: 1 },
+    { id: 'fast',    label: '速い',             intervalMs: 1400 / 2, speedFactor: 2 },
+    { id: 'fastest', label: '最速',             intervalMs: 1400 / 3, speedFactor: 3 },
   ]);
   assert.equal(DEFAULT_RUSH_SPEED, 'normal');
 });
 
-test('rushSpeedIntervalMs: 各speed idに対応する間隔(ms)を返す(最速はさらに倍速の43.75ms)', () => {
+test('rushSpeedIntervalMs: 各speed idに対応する間隔(ms)を返す(通常1:速い2:最速3の速さ)', () => {
   assert.equal(rushSpeedIntervalMs('normal'), 1400);
-  assert.equal(rushSpeedIntervalMs('fast'), 175);
-  assert.equal(rushSpeedIntervalMs('fastest'), 43.75);
+  assert.equal(rushSpeedIntervalMs('fast'), 700);
+  assert.equal(rushSpeedIntervalMs('fastest'), 1400 / 3);
 });
 
 test('rushSpeedIntervalMs: 不明なidはデフォルト(通常)にフォールバックする', () => {

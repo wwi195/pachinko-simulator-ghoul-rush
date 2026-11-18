@@ -106,13 +106,14 @@ function populateSelects() {
 function bindEvents() {
   rateSelectEl.addEventListener('change', () => { game.spinRate = Number(rateSelectEl.value); });
   modeSelectEl.addEventListener('change', () => { game.mode = modeSelectEl.value; });
-  speedSelectEl.addEventListener('change', () => { game.speed = speedSelectEl.value; });
+  speedSelectEl.addEventListener('change', () => { game.speed = speedSelectEl.value; applyRushSpeedCss(); });
   startBtnEl.addEventListener('click', startInvestmentFlow);
   rushSpeedBtnsEl.addEventListener('click', (e) => {
     const btn = e.target.closest('.speed-btn');
     if (!btn) return;
     game.speed = btn.dataset.speed;
     speedSelectEl.value = game.speed;
+    applyRushSpeedCss();
     renderRushSpeedButtons();
   });
   // RUSH中に演出モードを切り替えるボタン。この時点で既に生成済みの
@@ -370,6 +371,16 @@ function generateOneHold() {
 // 一時停止中はチックはするが補充しない(=新しい保留は増えない)。
 // スキップ中(終了するボタン押下後)はチック間隔を0にして即座に埋める。
 const HOLD_FILL_TICK_MS = 800;
+
+// ST消化速度(通常1・速い2・最速3)に応じて演出時間を短縮する。
+function spdMs(ms) {
+  return ms / rushSpeedFactor(game.speed);
+}
+
+// CSSの保留アニメーション時間も同じ倍率で短縮する(--rush-spd)。
+function applyRushSpeedCss() {
+  document.documentElement.style.setProperty('--rush-spd', rushSpeedFactor(game.speed));
+}
 let holdFillTimeoutId = null;
 
 function startHoldFillLoop() {
@@ -388,7 +399,7 @@ function stopHoldFillLoop() {
 }
 
 function scheduleNextHoldFillTick() {
-  holdFillTimeoutId = setTimeout(holdFillTick, game.skipping ? 0 : HOLD_FILL_TICK_MS);
+  holdFillTimeoutId = setTimeout(holdFillTick, game.skipping ? 0 : spdMs(HOLD_FILL_TICK_MS));
 }
 
 function holdFillTick() {
@@ -527,8 +538,8 @@ function scheduleHoldConsume(minDelayMs = 0) {
     return;
   }
   const baseInterval = rushSpeedIntervalMs(game.speed);
-  const interval = game.holds.length === 0 ? EMPTY_STOCK_WAIT_MS : baseInterval;
-  const delay = game.skipping ? 0 : Math.max(interval, minDelayMs);
+  const interval = game.holds.length === 0 ? spdMs(EMPTY_STOCK_WAIT_MS) : baseInterval;
+  const delay = game.skipping ? 0 : Math.max(interval, spdMs(minDelayMs));
   game.pendingTimeoutId = setTimeout(consumeNextHold, delay);
 }
 
@@ -569,7 +580,7 @@ function consumeNextHold() {
     return;
   }
 
-  const revealDelay = game.skipping ? 0 : HOLD_ARRIVAL_MS;
+  const revealDelay = game.skipping ? 0 : spdMs(HOLD_ARRIVAL_MS);
   game.pendingTimeoutId = setTimeout(() => resolveHold(hold), revealDelay);
 }
 
@@ -785,7 +796,7 @@ function runLcdSequence(isHit, isReach, reachDigit, onReachStart, onDone) {
       randomNonMatchingTriple().forEach((d, i) => setLcdDigit(i, d));
       flashOutCurrentHold();
       game.pendingTimeoutId = setTimeout(onDone, 0);
-    }, LCD_MISS_SPIN_MS);
+    }, spdMs(LCD_MISS_SPIN_MS));
     return;
   }
 
@@ -805,14 +816,14 @@ function runLcdSequence(isHit, isReach, reachDigit, onReachStart, onDone) {
       if (isHit) {
         setLcdDigit(1, d);
         lcdScreenEl.classList.add('lcd-aligned');
-        game.pendingTimeoutId = setTimeout(onDone, LCD_ALIGN_TO_NEXT_MS);
+        game.pendingTimeoutId = setTimeout(onDone, spdMs(LCD_ALIGN_TO_NEXT_MS));
       } else {
         setLcdDigit(1, nearMissDigit(d));
         flashOutCurrentHold();
         game.pendingTimeoutId = setTimeout(onDone, 0);
       }
-    }, LCD_REACH_HOLD_MS);
-  }, LCD_REACH_START_DELAY_MS);
+    }, spdMs(LCD_REACH_HOLD_MS));
+  }, spdMs(LCD_REACH_START_DELAY_MS));
 }
 
 // ---- 演出モード別の当選告知 ----
