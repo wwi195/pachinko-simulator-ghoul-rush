@@ -233,8 +233,7 @@ function flattenHits() {
     entry.events.forEach((ev) => {
       let cls, label;
       if (ev.win) {
-        // この機種の連チャン数はRUSH中の当たり回数なので、初当たりを1連目として+1する
-        const c = (entry.chain || 0) + 1;
+        const c = entry.chain || 1;
         cls = c >= 10 ? 'big-chain' : 'rush';
         label = `${c}連`;
       } else if (ev.type === 'charge') { cls = 'charge'; label = 'チャージ'; }
@@ -353,7 +352,7 @@ function enterRush() {
   game.rushGenerationDone = false;
   game.rushBalls = 0;
   game.revealedStRemaining = game.stCountConst;
-  game.revealedChain = 0;
+  game.revealedChain = 1; // 初当たりを1連チャン目として数える（ST中に1回当たると2連）
   game.paused = false;
   game.skipping = false;
   holdsRowEl.hidden = false;
