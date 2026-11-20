@@ -214,11 +214,59 @@ function renderStats() {
 
 const EVENT_TYPE_LABELS = { charge: 'チャージ', zugar: '図柄揃い' };
 
-function addHistoryEntry(spins, profit, events) {
-  game.history.unshift({ spins, profit, events });
+function addHistoryEntry(spins, profit, events, chain) {
+  game.history.unshift({ spins, profit, events, chain });
   if (game.history.length > HISTORY_MAX_ITEMS) game.history.pop();
   renderHistory();
+  renderHitGraph();
 }
+// ---- 大当たり履歴グラフ（チャージ・図柄揃いすべて） ----
+const HIST_BLOCK = 100;
+const HIST_MAX_BLOCKS = 7;
+
+// 履歴(新しい順)を大当たり1回ずつに展開する。回転数は前回の大当たりからの回転数
+function flattenHits() {
+  const hits = [];
+  game.history.forEach((entry) => {
+    const list = [];
+    let prev = 0;
+    entry.events.forEach((ev) => {
+      let cls, label;
+      if (ev.win) {
+        // この機種の連チャン数はRUSH中の当たり回数なので、初当たりを1連目として+1する
+        const c = (entry.chain || 0) + 1;
+        cls = c >= 10 ? 'big-chain' : 'rush';
+        label = `${c}連`;
+      } else if (ev.type === 'charge') { cls = 'charge'; label = 'チャージ'; }
+      else { cls = 'zugar'; label = '図柄'; }
+      list.push({ games: ev.spins - prev, cls, label });
+      prev = ev.spins;
+    });
+    hits.push(...list.reverse());
+  });
+  return hits;
+}
+
+function renderHitGraph() {
+  const el = document.getElementById('hist-cols');
+  if (!el) return;
+  const hits = flattenHits();
+  if (hits.length === 0) {
+    el.innerHTML = '<div class="hist-empty">まだ大当たりがありません</div>';
+    return;
+  }
+  el.innerHTML = hits.map((h, i) => {
+    const blocks = Math.min(HIST_MAX_BLOCKS, Math.max(1, Math.ceil(h.games / HIST_BLOCK)));
+    const more = h.games >= HIST_BLOCK * HIST_MAX_BLOCKS ? '<div class="hist-more">▲</div>' : '';
+    return `<div class="hist-col ${h.cls}">
+      <div class="hist-g">${h.games}</div>${more}
+      ${'<div class="hist-block"></div>'.repeat(blocks)}
+      <div class="hist-type">${h.label}</div>
+      <div class="hist-idx">${i + 1}</div>
+    </div>`;
+  }).join('');
+}
+
 
 function renderHistory() {
   if (game.history.length === 0) {
@@ -872,7 +920,7 @@ function finishRush() {
   game.stats.maxChain = Math.max(game.stats.maxChain, chain);
   game.stats.totalBalls += balls;
   renderStats();
-  addHistoryEntry(game.investment.spins, profit, game.investment.events);
+  addHistoryEntry(game.investment.spins, profit, game.investment.events, chain);
 
   game.skipping = false;
   holdsRowEl.hidden = true;
@@ -924,4 +972,5 @@ document.addEventListener('DOMContentLoaded', () => {
   bindEvents();
   renderStats();
   renderHistory();
+  renderHitGraph();
 });
