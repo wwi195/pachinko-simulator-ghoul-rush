@@ -401,12 +401,16 @@ function showRushEntry() {
 
 // ---- RUSH中：保留システム ----
 
+const INITIAL_HIT_ACTUAL = { zugar: 1400, charge: 280 };
+
 function enterRush() {
   game.rush = createRushState();
   game.stCountConst = game.rush.stRemaining;
   game.holds = [];
   game.rushGenerationDone = false;
-  game.rushBalls = 0;
+  // 初当たり（RUSH突入のきっかけになった当たり）の出玉も獲得出玉に含める
+  //   図柄揃い 1500発(実質1400球) ／ チャージ 300発(実質280球)
+  game.rushBalls = INITIAL_HIT_ACTUAL[game.investment && game.investment.path] || 0;
   game.revealedStRemaining = game.stCountConst;
   game.revealedChain = 1; // 初当たりを1連チャン目として数える（ST中に1回当たると2連）
   game.paused = false;
