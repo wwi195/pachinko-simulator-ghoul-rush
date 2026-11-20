@@ -835,3 +835,17 @@ select {
   min-height: 0;
   padding: 0;
 }
+
+/* ---- 差玉推移グラフ ---- */
+#slump-area { background: #0a0a0a; border-top: 1px solid #222; padding: 6px 10px 10px; flex-shrink: 0; }
+.slump-title { font-size: 10px; color: #666; letter-spacing: 1px; margin-bottom: 4px; display: flex; justify-content: space-between; }
+.slump-title b.plus { color: #44cc88; }
+.slump-title b.minus { color: #ff6b6b; }
+#slump-svg { width: 100%; height: 170px; display: block; }
+#slump-svg .sl-grid { stroke: #222; stroke-width: 1; }
+#slump-svg .sl-zero { stroke: #666; stroke-width: 1; stroke-dasharray: 3 3; }
+#slump-svg .sl-ylab { fill: #666; font-size: 9px; text-anchor: end; }
+#slump-svg .sl-xlab { fill: #666; font-size: 9px; text-anchor: middle; }
+#slump-svg .sl-line { fill: none; stroke-width: 1.6; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+#slump-svg .sl-dot.plus { fill: #44cc88; }
+#slump-svg .sl-dot.minus { fill: #ff6b6b; }

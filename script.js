@@ -220,6 +220,62 @@ function addHistoryEntry(spins, profit, events, chain) {
   renderHistory();
   renderHitGraph();
 }
+// ---- 差玉推移グラフ（プレイを重ねた累計） ----
+// 横軸=累計の通常時回転数、縦軸=累計差玉（玉換算）。1プレイごとに
+// 「通常時の投資で下がる → RUSHの出玉で上がる」の2点を追加する。
+const slump = { pts: [{ x: 0, y: 0 }], x: 0, y: 0 };
+function recordSessionSlump(spins, toushi, profit) {
+  slump.x += spins;
+  slump.pts.push({ x: slump.x, y: Math.round(slump.y - toushi / YEN_PER_BALL) });
+  slump.y += profit / YEN_PER_BALL;
+  slump.pts.push({ x: slump.x, y: Math.round(slump.y) });
+  renderSlumpGraph();
+}
+function slumpNiceStep(range) {
+  const raw = range / 4;
+  const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+  const n = raw / pow;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * pow;
+}
+function renderSlumpGraph() {
+  const el = document.getElementById('slump-svg');
+  if (!el) return;
+  const pts = slump.pts;
+  const W = 360, H = 170, L = 46, R = 8, T = 10, B = 22;
+  const maxX = Math.max(100, pts[pts.length - 1].x);
+  let minY = 0, maxY = 0;
+  pts.forEach((p) => { if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y; });
+  if (maxY - minY < 1000) { maxY += 500; minY -= 500; }
+  const step = slumpNiceStep(maxY - minY);
+  minY = Math.floor(minY / step) * step;
+  maxY = Math.ceil(maxY / step) * step;
+  const sx = (x) => L + (x / maxX) * (W - L - R);
+  const sy = (y) => T + (1 - (y - minY) / (maxY - minY)) * (H - T - B);
+  let grid = '';
+  for (let v = minY; v <= maxY + 1e-9; v += step) {
+    const y = sy(v).toFixed(1);
+    grid += `<line x1="${L}" y1="${y}" x2="${W - R}" y2="${y}" class="${v === 0 ? 'sl-zero' : 'sl-grid'}"/>`;
+    grid += `<text x="${L - 4}" y="${(+y + 3).toFixed(1)}" class="sl-ylab">${v.toLocaleString()}</text>`;
+  }
+  const xStep = slumpNiceStep(maxX);
+  for (let v = 0; v <= maxX + 1e-9; v += xStep) {
+    const anchor = sx(v) > W - R - 16 ? ' style="text-anchor:end"' : '';
+    grid += `<text x="${sx(v).toFixed(1)}" y="${H - 6}" class="sl-xlab"${anchor}>${v.toLocaleString()}</text>`;
+  }
+  const line = pts.map((p) => `${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(' ');
+  const cur = pts[pts.length - 1];
+  const cls = cur.y >= 0 ? 'plus' : 'minus';
+  const zeroOff = Math.min(1, Math.max(0, (sy(0) - T) / (H - T - B))).toFixed(4);
+  el.innerHTML = `<defs><linearGradient id="sl-grad" gradientUnits="userSpaceOnUse" x1="0" y1="${T}" x2="0" y2="${H - B}">
+      <stop offset="${zeroOff}" stop-color="#44cc88"/><stop offset="${zeroOff}" stop-color="#ff6b6b"/>
+    </linearGradient></defs>
+    ${grid}
+    <polyline points="${line}" class="sl-line" stroke="url(#sl-grad)"/>
+    <circle cx="${sx(cur.x).toFixed(1)}" cy="${sy(cur.y).toFixed(1)}" r="3" class="sl-dot ${cls}"/>`;
+  document.getElementById('slump-now').innerHTML =
+    `累計 <b class="${cls}">${cur.y >= 0 ? '+' : ''}${cur.y.toLocaleString()}玉</b>（通常${slump.x.toLocaleString()}回転）`;
+}
+
 // ---- 大当たり履歴グラフ（チャージ・図柄揃いすべて） ----
 const HIST_BLOCK = 100;
 const HIST_MAX_BLOCKS = 7;
@@ -920,6 +976,7 @@ function finishRush() {
   game.stats.totalBalls += balls;
   renderStats();
   addHistoryEntry(game.investment.spins, profit, game.investment.events, chain);
+  recordSessionSlump(game.investment.spins, game.investment.toushi, profit);
 
   game.skipping = false;
   holdsRowEl.hidden = true;
@@ -972,4 +1029,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderStats();
   renderHistory();
   renderHitGraph();
+  renderSlumpGraph();
 });
