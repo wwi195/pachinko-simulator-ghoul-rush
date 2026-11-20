@@ -827,3 +827,11 @@ select {
 .hist-col.big-chain .hist-type { color: #ffd23f; }
 .hist-idx { font-size: 8px; color: #555; height: 12px; }
 .hist-empty { font-size: 10px; color: #666; padding: 20px 4px; }
+
+/* 設定画面(スタート前)を出していない間は、メイン画面の空きスペースを詰める。
+   ポップアップ(#overlay)やリゼ画像は画面全体に重ねて出すので影響しない。 */
+#main-screen:has(> #start-controls[hidden]) {
+  flex: 0 0 auto;
+  min-height: 0;
+  padding: 0;
+}
